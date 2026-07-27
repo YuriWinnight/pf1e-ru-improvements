@@ -2,6 +2,80 @@ const MODULE_ID = "pf1e-ru-improvements";
 const RULES_PACK_ID = `${MODULE_ID}.rules`;
 const SKILLS_JOURNAL_ID = "RuSkillsJournal1";
 const CONDITIONS_JOURNAL_ID = "RuConditionsJrnl";
+const ATHLETICS_SETTING = "enableAthleticsSkill";
+const ATHLETICS_SKILL_ID = "athletics";
+const ATHLETICS_ACTOR_TYPES = new Set(["character", "npc"]);
+
+function createAthleticsSkillData() {
+  return {
+    name: "Атлетика",
+    ability: "str",
+    rank: 0,
+    mod: 0,
+    rt: false,
+    cs: false,
+    acp: false,
+    background: false,
+    custom: true
+  };
+}
+
+function isActiveGM() {
+  if (!game.user?.isGM) return false;
+  const activeGM = game.users?.activeGM;
+  return !activeGM || activeGM.id === game.user.id;
+}
+
+function actorNeedsAthletics(actor) {
+  if (!actor || !ATHLETICS_ACTOR_TYPES.has(actor.type)) return false;
+  return !Object.prototype.hasOwnProperty.call(actor.system?.skills ?? {}, ATHLETICS_SKILL_ID);
+}
+
+async function addAthleticsToActor(actor) {
+  if (!actorNeedsAthletics(actor)) return false;
+  await actor.update({ [`system.skills.${ATHLETICS_SKILL_ID}`]: createAthleticsSkillData() });
+  return true;
+}
+
+function reportAthleticsError(error) {
+  console.error(`${MODULE_ID} | Не удалось добавить навык «Атлетика».`, error);
+  ui.notifications?.error(game.i18n.localize("PF1ERU.Settings.Athletics.Error"));
+}
+
+async function addAthleticsToExistingActors({ notify = false } = {}) {
+  if (!isActiveGM()) return 0;
+
+  const updates = game.actors
+    .filter(actorNeedsAthletics)
+    .map((actor) => ({
+      _id: actor.id,
+      [`system.skills.${ATHLETICS_SKILL_ID}`]: createAthleticsSkillData()
+    }));
+
+  if (updates.length) await Actor.updateDocuments(updates);
+  if (notify) {
+    const key = updates.length
+      ? "PF1ERU.Settings.Athletics.Added"
+      : "PF1ERU.Settings.Athletics.AlreadyAdded";
+    ui.notifications?.info(game.i18n.format(key, { count: updates.length }));
+  }
+  return updates.length;
+}
+
+function registerAthleticsSetting() {
+  game.settings.register(MODULE_ID, ATHLETICS_SETTING, {
+    name: "PF1ERU.Settings.Athletics.Name",
+    hint: "PF1ERU.Settings.Athletics.Hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+    onChange: (enabled) => {
+      if (!enabled) return;
+      void addAthleticsToExistingActors({ notify: true }).catch(reportAthleticsError);
+    }
+  });
+}
 
 function numberedIconOptions(folder, prefix, numbers, label) {
   return numbers.map((number) => ({
@@ -139,6 +213,7 @@ const RU_OVERRIDES = {
   "PF1.DomainSlotValue": "Слоты под Сферу/Школу",
   "PF1.Psychic": "Экстрасенсорные заклинания",
   "PF1.Spellcasting.Type.Psychic": "Экстрасенсорный",
+  "PF1.SpellBookPrimary": "Основное",
   "PF1.SpellBookSecondary": "Вторичное",
   "PF1.SpellBookTertiary": "Третичное",
   "PF1.SpellBookSpelllike": "Псевдозаклинания",
@@ -358,6 +433,10 @@ function translateText(value) {
     .replace(/^(\s*)Automatic(\s*)$/g, "$1Автоматическое$2")
     .replace(/^(\s*)Scatter(\s*)$/g, "$1Рассеивающее$2")
     .replace(/^(\s*)Special(\s*)$/g, "$1Особое$2")
+    .replace(/^(\s*)Primary(\s*)$/g, "$1Основное$2")
+    .replace(/^(\s*)Secondary(\s*)$/g, "$1Вторичное$2")
+    .replace(/^(\s*)Tertiary(\s*)$/g, "$1Третичное$2")
+    .replace(/^(\s*)Spell-likes?(\s*)$/gi, "$1Псевдозаклинания$2")
     .replace(/\bIdentify DC\b/g, "СЛ Опознания")
     .replace(/\bDC Formula\b/g, "Формула СЛ")
     .replace(/формула СЛ/g, "Формула СЛ")
@@ -624,23 +703,6 @@ function translateItemApplication(app, root) {
   replaceExactRenderedText(root, common);
 }
 
-function resizeActorSheets(root) {
-  if (!(root instanceof HTMLElement)) return;
-  const selector = ".window-app.sheet.actor, .pf1alt.sheet.actor, .pf1e-pg-alt-sheet.sheet.actor";
-  const candidates = [];
-  if (root.matches(selector)) candidates.push(root);
-  candidates.push(...root.querySelectorAll(selector));
-  const sheets = new Set(candidates.map((element) => element.closest(".window-app") ?? element));
-
-  for (const sheet of sheets) {
-    const app = ui.windows[sheet.dataset.appid];
-    const currentWidth = Number(app?.position?.width ?? sheet.getBoundingClientRect().width);
-    if (!(currentWidth < 1040)) continue;
-    if (app?.setPosition) app.setPosition({ width: 1250 });
-    else sheet.style.width = "1250px";
-  }
-}
-
 function makeSettingsEditorResizable(app, root) {
   if (app?.id !== "settings-editor" || !(root instanceof HTMLElement)) return;
   const windowElement = app?.element?.[0] ?? root.closest(".window-app");
@@ -682,17 +744,40 @@ function makeSettingsEditorResizable(app, root) {
   });
 }
 
+function makeActorSheetResponsive(app, root) {
+  if (!(root instanceof HTMLElement) || app?.object?.documentName !== "Actor") return;
+  const windowElement = app?.element?.[0] ?? root.closest(".window-app");
+  if (!(windowElement instanceof HTMLElement)) return;
+  if (!windowElement.matches(".pf1alt.sheet.actor, .pf1e-pg-alt-sheet.sheet.actor")) return;
+
+  const updateLayout = () => {
+    const width = windowElement.getBoundingClientRect().width;
+    windowElement.classList.toggle("pf1e-ru-compact-actor", width < 900);
+    windowElement.classList.toggle("pf1e-ru-narrow-actor", width < 760);
+  };
+
+  const current = app.__pf1eRuResponsiveLayout;
+  if (current?.element === windowElement) {
+    current.update();
+    return;
+  }
+  current?.observer?.disconnect();
+
+  const observer = typeof ResizeObserver === "function" ? new ResizeObserver(updateLayout) : null;
+  observer?.observe(windowElement);
+  app.__pf1eRuResponsiveLayout = { element: windowElement, observer, update: updateLayout };
+  updateLayout();
+}
+
 function installDomTranslationObserver() {
   if (!isRussian() || game.i18n.__pf1eRuImprovementsObserver) return;
 
   translateRenderedHtml(document.body);
-  resizeActorSheets(document.body);
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
         if (!(node instanceof HTMLElement)) continue;
         translateRenderedHtml(node);
-        resizeActorSheets(node);
       }
     }
   });
@@ -732,10 +817,11 @@ function processActorSheet(app, html) {
   const root = html?.[0] ?? html;
   translateRenderedHtml(root);
   redirectReferenceBooks(root);
-  resizeActorSheets(app?.element?.[0] ?? root);
+  makeActorSheetResponsive(app, root);
 }
 
 Hooks.once("init", () => {
+  registerAthleticsSetting();
   installModuleStyles();
   applyRussianTranslations();
   installPluralFormatting();
@@ -747,12 +833,24 @@ Hooks.once("ready", async () => {
   await collectCompendiumReferences();
   processRenderedChatMessages();
 
+  if (game.settings.get(MODULE_ID, ATHLETICS_SETTING)) {
+    await addAthleticsToExistingActors().catch(reportAthleticsError);
+  }
+
   for (const application of Object.values(ui.windows)) {
     if (application?.object?.documentName === "Actor" && application.rendered) application.render(false);
   }
 });
 
 Hooks.on("renderActorSheet", processActorSheet);
+Hooks.on("createActor", (actor) => {
+  if (!game.settings.get(MODULE_ID, ATHLETICS_SETTING) || !isActiveGM()) return;
+  void addAthleticsToActor(actor).catch(reportAthleticsError);
+});
+Hooks.on("closeActorSheet", (app) => {
+  app?.__pf1eRuResponsiveLayout?.observer?.disconnect();
+  delete app?.__pf1eRuResponsiveLayout;
+});
 Hooks.on("renderItemSheet", (app, html) => {
   const root = html?.[0] ?? html;
   translateRenderedHtml(root);

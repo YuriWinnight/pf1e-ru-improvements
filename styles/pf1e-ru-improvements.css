@@ -1,8 +1,3 @@
-.pf1alt.sheet.actor,
-.pf1e-pg-alt-sheet.sheet.actor {
-  min-width: 1250px;
-}
-
 .pf1alt.sheet.actor .item-list-search,
 .pf1e-pg-alt-sheet.sheet.actor .item-list-search,
 .pf1alt .item-list-search,
@@ -35,11 +30,11 @@
 .pf1alt .inventory-filters:has(> .item-list-search),
 .pf1e-pg-alt-sheet .inventory-filters:has(> .item-list-search) {
   box-sizing: border-box;
-  flex: 0 0 34px !important;
-  min-height: 34px;
+  flex: 0 0 auto !important;
+  min-height: 48px;
   margin-top: 2px !important;
   margin-bottom: 6px !important;
-  align-items: center !important;
+  align-items: stretch !important;
   gap: 8px;
 }
 
@@ -59,7 +54,152 @@
 .pf1e-pg-alt-sheet .inventory-filters .filter-list {
   flex: 1 1 auto;
   min-width: 0;
+  min-height: 40px;
+  align-items: stretch;
+}
+
+.pf1alt.sheet.actor .inventory-filters .filter-list .filter-item,
+.pf1e-pg-alt-sheet.sheet.actor .inventory-filters .filter-list .filter-item,
+.pf1alt .inventory-filters .filter-list .filter-item,
+.pf1e-pg-alt-sheet .inventory-filters .filter-list .filter-item {
+  display: flex;
   align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  line-height: 1.1;
+  white-space: normal !important;
+}
+
+.pf1alt.sheet.actor .tab.attacks ul.attributes.misc-base,
+.pf1e-pg-alt-sheet.sheet.actor .tab.attacks ul.attributes.misc-base {
+  flex: 0 0 72px !important;
+  min-height: 72px;
+}
+
+.pf1alt.sheet.actor .tab.attacks ul.attributes.misc-base > li.attribute,
+.pf1e-pg-alt-sheet.sheet.actor .tab.attacks ul.attributes.misc-base > li.attribute {
+  box-sizing: border-box;
+  height: auto !important;
+  min-height: 70px;
+}
+
+.pf1alt.sheet.actor .tab.attacks ul.attributes.misc-base > li.attribute .attribute-value,
+.pf1e-pg-alt-sheet.sheet.actor .tab.attacks ul.attributes.misc-base > li.attribute .attribute-value {
+  margin-bottom: 0 !important;
+  min-height: 28px;
+  padding-bottom: 3px;
+}
+
+.pf1alt.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute,
+.pf1e-pg-alt-sheet.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute {
+  box-sizing: border-box;
+  height: auto !important;
+  min-height: 70px;
+}
+
+.pf1alt.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.speed,
+.pf1e-pg-alt-sheet.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.speed,
+.pf1alt.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.nac,
+.pf1e-pg-alt-sheet.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.nac {
+  min-height: 86px;
+}
+
+.pf1alt.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.high,
+.pf1e-pg-alt-sheet.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.high {
+  min-height: 86px;
+}
+
+.pf1alt.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.high-mid,
+.pf1e-pg-alt-sheet.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.high-mid {
+  min-height: 100px;
+}
+
+.pf1alt.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.higher,
+.pf1e-pg-alt-sheet.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.higher {
+  min-height: 120px;
+}
+
+.pf1alt.sheet.actor .tab.attributes ul.attributes.misc-base,
+.pf1e-pg-alt-sheet.sheet.actor .tab.attributes ul.attributes.misc-base {
+  align-items: stretch !important;
+}
+
+.pf1alt.sheet.actor .tab.attributes .attribute-speed,
+.pf1e-pg-alt-sheet.sheet.actor .tab.attributes .attribute-speed {
+  flex: 1 1 auto;
+  justify-content: space-between;
+}
+
+.pf1alt.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute .attribute-footer,
+.pf1e-pg-alt-sheet.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute .attribute-footer,
+.pf1alt.sheet.actor .tab.attributes .attribute-speed .attribute-footer,
+.pf1e-pg-alt-sheet.sheet.actor .tab.attributes .attribute-speed .attribute-footer {
+  flex: 0 0 23px;
+  margin-top: auto !important;
+  min-height: 23px;
+  width: 100%;
+}
+
+.pf1e-ru-compact-actor.pf1alt.sheet.actor .tab.attacks ul.attributes.misc-base,
+.pf1e-ru-compact-actor.pf1e-pg-alt-sheet.sheet.actor .tab.attacks ul.attributes.misc-base {
+  flex-basis: 90px !important;
+  min-height: 90px;
+}
+
+.pf1e-ru-compact-actor.pf1alt.sheet.actor .tab.attacks ul.attributes.misc-base > li.attribute,
+.pf1e-ru-compact-actor.pf1e-pg-alt-sheet.sheet.actor .tab.attacks ul.attributes.misc-base > li.attribute {
+  min-height: 88px;
+}
+
+.pf1e-ru-compact-actor.pf1alt.sheet.actor .tab.attacks ul.attributes.misc-base > li.attribute .attribute-value,
+.pf1e-ru-compact-actor.pf1e-pg-alt-sheet.sheet.actor .tab.attacks ul.attributes.misc-base > li.attribute .attribute-value {
+  min-height: 34px;
+  padding-bottom: 6px;
+}
+
+.pf1e-ru-compact-actor.pf1alt.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute,
+.pf1e-ru-compact-actor.pf1e-pg-alt-sheet.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute {
+  min-height: 92px;
+}
+
+.pf1e-ru-compact-actor.pf1alt.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.speed,
+.pf1e-ru-compact-actor.pf1alt.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.high,
+.pf1e-ru-compact-actor.pf1e-pg-alt-sheet.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.speed,
+.pf1e-ru-compact-actor.pf1e-pg-alt-sheet.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.high {
+  min-height: 116px;
+}
+
+.pf1e-ru-compact-actor.pf1alt.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.high-mid,
+.pf1e-ru-compact-actor.pf1e-pg-alt-sheet.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.high-mid {
+  min-height: 124px;
+}
+
+.pf1e-ru-compact-actor.pf1alt.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.higher,
+.pf1e-ru-compact-actor.pf1e-pg-alt-sheet.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.higher {
+  min-height: 144px;
+}
+
+.pf1e-ru-compact-actor.pf1alt.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute .attribute-name,
+.pf1e-ru-compact-actor.pf1e-pg-alt-sheet.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute .attribute-name {
+  min-height: 38px;
+}
+
+.pf1e-ru-narrow-actor.pf1alt.sheet.actor .tab.attacks ul.attributes.misc-base,
+.pf1e-ru-narrow-actor.pf1e-pg-alt-sheet.sheet.actor .tab.attacks ul.attributes.misc-base {
+  flex-basis: 102px !important;
+  min-height: 102px;
+}
+
+.pf1e-ru-narrow-actor.pf1alt.sheet.actor .tab.attacks ul.attributes.misc-base > li.attribute,
+.pf1e-ru-narrow-actor.pf1e-pg-alt-sheet.sheet.actor .tab.attacks ul.attributes.misc-base > li.attribute {
+  min-height: 100px;
+}
+
+.pf1e-ru-narrow-actor.pf1alt.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.speed,
+.pf1e-ru-narrow-actor.pf1alt.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.high,
+.pf1e-ru-narrow-actor.pf1e-pg-alt-sheet.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.speed,
+.pf1e-ru-narrow-actor.pf1e-pg-alt-sheet.sheet.actor .tab.attributes ul.attributes.misc-base > li.attribute.high {
+  min-height: 128px;
 }
 
 .pf1alt.sheet.actor .point-buy-button,
