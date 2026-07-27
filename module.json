@@ -1,0 +1,80 @@
+{
+  "id": "pf1e-ru-improvements",
+  "title": "Pathfinder 1e Ru Improvements",
+  "description": "Дополнительная русская локализация листа Pathfinder 1e для Foundry VTT 11.",
+  "version": "1.0.0",
+  "url": "https://github.com/YuriWinnight/pf1e-ru-improvements",
+  "manifest": "https://github.com/YuriWinnight/pf1e-ru-improvements/releases/latest/download/module.json",
+  "download": "https://github.com/YuriWinnight/pf1e-ru-improvements/releases/download/v1.0.0/pf1e-ru-improvements-v1.0.0.zip",
+  "authors": [
+    {
+      "name": "Project Garden"
+    }
+  ],
+  "compatibility": {
+    "minimum": "11",
+    "verified": "11.315",
+    "maximum": "11"
+  },
+  "esmodules": [
+    "scripts/pf1e-ru-improvements.js"
+  ],
+  "styles": [
+    "styles/pf1e-ru-improvements.css"
+  ],
+  "languages": [
+    {
+      "lang": "ru",
+      "name": "Русский",
+      "path": "lang/ru.json"
+    }
+  ],
+  "packs": [
+    {
+      "name": "rules",
+      "label": "PF1e: русские правила",
+      "path": "packs/rules",
+      "type": "JournalEntry",
+      "system": "pf1",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "tables",
+      "label": "PF1e: русские таблицы",
+      "path": "packs/tables",
+      "type": "RollTable",
+      "system": "pf1",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    }
+  ],
+  "packFolders": [
+    {
+      "name": "Pathfinder 1e Ru Improvements",
+      "sorting": "m",
+      "color": "#6f4e37",
+      "packs": [
+        "rules",
+        "tables"
+      ]
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "pf1",
+        "type": "system",
+        "compatibility": {
+          "minimum": "9.6",
+          "verified": "9.6"
+        }
+      }
+    ]
+  },
+  "socket": false
+}
