@@ -269,7 +269,167 @@ const RU_OVERRIDES = {
   "PF1.Spellcasting.Type.Alchemy": "Алхимический",
   "PF1.AutoSpellClassLevelOffset.Formula": "Модификации уровня заклинателя",
   "PF1.AutoSpellClassLevelOffset.InfoBox":
-    "Если у вас есть престиж-класс, который изменяет ваш уровень заклинателя, добавьте его сюда (например @classes.mysticTheurge.level)"
+    "Если у вас есть престиж-класс, который изменяет ваш уровень заклинателя, добавьте его сюда (например @classes.mysticTheurge.level)",
+  "PF1.AbilityTest": "Проверка характеристики {ability}",
+  "PF1.TakeX": "Взять {number}",
+  "PF1.InitiativeCheck": "{name}: Проверка инициативы",
+  "PF1.Roll": "Бросок",
+  "PF1.SavingThrow": "Испытание",
+  "PF1.SavingThrowRoll": "Испытание {save}",
+  "PF1.Application.DamageResistanceSelector.DRTitle": "Выбор снижения урона",
+  "PF1.Application.DamageResistanceSelector.ERTitle": "Выбор невосприимчивости к энергии",
+  "PF1.Application.DamageResistanceSelector.DamageAmount": "Количество",
+  "PF1.Application.DamageResistanceSelector.Bypassed": "Преодолевает",
+  "PF1.Application.DamageResistanceSelector.Resisted": "Против",
+  "PF1.Application.DamageResistanceSelector.TypeNothing": "Никакое",
+  "PF1.Application.DamageResistanceSelector.CombinationType": "Условие",
+  "PF1.Application.DamageResistanceSelector.CombinationOr": "или",
+  "PF1.Application.DamageResistanceSelector.CombinationAnd": "и",
+  "PF1.Application.DamageResistanceSelector.CombinationFormattedOr": "{type1} или {type2}",
+  "PF1.Application.DamageResistanceSelector.CombinationFormattedAnd": "{type1} и {type2}",
+  "PF1.Application.EntrySelector.Title": "Выбор записи",
+  "PF1.Application.ChangeTargetSelector.Title": "Выбрать цель изменения",
+  "PF1.Application.TraitSelector.CustomHint": "Несколько значений можно разделить точкой с запятой (;).",
+  "PF1.AddEntry": "Добавить запись",
+  "PF1.Operator": "Условие",
+  "PF1.CondTypeDeathEffects": "Эффекты смерти",
+  "PF1.Info.NotFunctioning": "В настоящее время система не использует эту функцию.",
+  "PF1.LanguageAndroffan": "Андроффан",
+  "PF1.Notes": "Заметки",
+  "PF1.NewItem": "Новый {type}",
+  "PF1.WeaponGroupAxes": "Топоры",
+  "PF1.WeaponGroupBladesHeavy": "Тяжёлые клинки",
+  "PF1.WeaponGroupBladesLight": "Лёгкие клинки",
+  "PF1.WeaponGroupBows": "Луки",
+  "PF1.WeaponGroupClose": "Тычковое",
+  "PF1.WeaponGroupCrossbows": "Арбалеты",
+  "PF1.WeaponGroupDouble": "Двустороннее",
+  "PF1.WeaponGroupFirearms": "Огнестрельное",
+  "PF1.WeaponGroupFlails": "Гибкое",
+  "PF1.WeaponGroupHammers": "Молоты",
+  "PF1.WeaponGroupMonk": "Монашеское",
+  "PF1.WeaponGroupNatural": "Естественное",
+  "PF1.WeaponGroupPolearms": "Древковое",
+  "PF1.WeaponGroupSiegeEngines": "Осадное",
+  "PF1.WeaponGroupSpears": "Копья",
+  "PF1.WeaponGroupThrown": "Метательное",
+  "PF1.WeaponGroupTribal": "Племенное",
+  "PF1.LinkHelpChildren": "Связанные дочерние предметы удаляются из актёра при удалении родительского предмета связи (этого предмета).",
+  "PF1.LinkHelpCharges": "Связанные предметы наследуют и совместно используют заряды родительского предмета связи (этого предмета).",
+  "PF1.DeleteItem": "Удалить предмет",
+  "PF1.DeleteItemTitle": "Удалить предмет: {name}",
+  "PF1.ScriptCalls.Name": "Вызовы скриптов",
+  "PF1.ScriptCalls.NewName": "Новый вызов скрипта",
+  "PF1.ScriptCalls.Create": "Создать встроенный вызов скрипта",
+  "PF1.ScriptCalls.Use.Name": "Использование",
+  "PF1.ScriptCalls.Use.Info": "Вызывается, когда предмет был «использован» — например, при атаке, выпивании зелья и т. п. Содержит дополнительную переменную `attacks` — массив бросков атаки этого действия, если они есть.",
+  "PF1.ScriptCalls.Equip.Name": "Экипировка",
+  "PF1.ScriptCalls.Equip.Info": "Вызывается, когда предмет экипируют или снимают. Содержит дополнительную переменную `equipped`, принимающую значение `true` или `false`.",
+  "PF1.ScriptCalls.ChangeQuantity.Name": "Изменение количества",
+  "PF1.ScriptCalls.ChangeQuantity.Info": "Вызывается при изменении количества предмета. Содержит дополнительные переменные `quantity.previous` и `quantity.new`, обе из которых являются числами.",
+  "PF1.Hidden": "Скрыто",
+  "PF1.ActivationTypeNonaction": "Не требует действия",
+  "PF1.ActivationTypeAoO": "Внеочередная атака",
+  "PF1.TimeTurn": "Ход",
+  "PF1.AmmunitionSubtype": "Тип боеприпаса",
+  "PF1.AmmoTypeArrow": "Стрела",
+  "PF1.AmmoTypeBolt": "Арбалетный болт",
+  "PF1.AmmoTypeRepeatingBolt": "Арбалетный болт (многозарядный)",
+  "PF1.AmmoTypeBulletSling": "Ядро",
+  "PF1.AmmoTypeBulletGun": "Пуля",
+  "PF1.AmmoTypeBulletDragoon": "Пуля (Драгунское огнестрельное оружие)",
+  "PF1.AmmoTypeDart": "Дротик",
+  "PF1.AmmoTypeSiege": "Осадный боеприпас",
+  "PF1.BonusModifierHaste": "Ускорение",
+  "PF1.Haste": "Ускорение",
+  "PF1.BuffTarUntrainedSkills": "Навыки без изучения",
+  "PF1.CarryStrength": "Силу переноски",
+  "PF1.CarryMultiplier": "Модификатор переноски",
+  "PF1.GiveItem": "Передать предмет актёру",
+  "PF1.SplitItem": "Разделить предмет",
+  "PF1.Dialog.SplitItem.Title": "Разделить предмет: {name}",
+  "PF1.Dialog.SplitItem.Desc": "Укажите количество, которое нужно отделить.",
+  "PF1.Split": "Разделить",
+  "PF1.Abundant": "Обильные",
+  "PF1.AbundantDesc": "Не уменьшать количество этих боеприпасов при использовании.",
+  "PF1.ItemContainerSellValue": "Цена продажи: {gp} ЗМ, {sp} СМ, {cp} ММ",
+  "PF1.Sheet.Container": "Контейнер",
+  "ITEM.TypeContainer": "Контейнер"
+};
+
+const EXACT_RENDERED_TRANSLATIONS = {
+  "Damage Reduction Selection": "Выбор снижения урона",
+  "Energy Resistance Selection": "Выбор невосприимчивости к энергии",
+  Amount: "Количество",
+  "Bypassed by": "Преодолевает",
+  Against: "Против",
+  Operator: "Условие",
+  or: "или",
+  and: "и",
+  Nothing: "Никакое",
+  "Add Entry": "Добавить запись",
+  "Add Entary": "Добавить запись",
+  "Entry Selector": "Выбор записи",
+  "Death Effects": "Эффекты смерти",
+  "You can separate distinct entries with semicolon (;).": "Несколько значений можно разделить точкой с запятой (;).",
+  "The system (currently) doesn't use this feature": "В настоящее время система не использует эту функцию.",
+  Androffan: "Андроффан",
+  Notes: "Заметки",
+  Roll: "Бросок",
+  "Linked children are deleted from the actor when the link parent (this item) is deleted.":
+    "Связанные дочерние предметы удаляются из актёра при удалении родительского предмета связи (этого предмета).",
+  "Linked items inherit and share the charges from the link parent (this item).":
+    "Связанные предметы наследуют и совместно используют заряды родительского предмета связи (этого предмета).",
+  "Delete Item": "Удалить предмет",
+  "Script Calls": "Вызовы скриптов",
+  "New Script Call": "Новый вызов скрипта",
+  "Change Quantity": "Изменение количества",
+  Hidden: "Скрыто",
+  "Create embedded script call": "Создать встроенный вызов скрипта",
+  Nonaction: "Не требует действия",
+  "Attack of Opportunity": "Внеочередная атака",
+  Turn: "Ход",
+  "Ammunition Subtype": "Тип боеприпаса",
+  Arrow: "Стрела",
+  Bolt: "Арбалетный болт",
+  "Bolt (Repeating)": "Арбалетный болт (многозарядный)",
+  "Bullet (Sling)": "Ядро",
+  "Bullet (Firearm)": "Пуля",
+  "Bullet (Dragoon Firearm)": "Пуля (Драгунское огнестрельное оружие)",
+  Dart: "Дротик",
+  Siege: "Осадный боеприпас",
+  Haste: "Ускорение",
+  "Select change target": "Выбрать цель изменения",
+  "Untrained Skills": "Навыки без изучения",
+  "Carry Strength": "Силу переноски",
+  "Carry Strenght": "Силу переноски",
+  "Carry Multiplier": "Модификатор переноски",
+  Defense: "Защита",
+  Defence: "Защита",
+  "Give item to actor": "Передать предмет актёру",
+  "Split Item": "Разделить предмет",
+  "Input the number to split off.": "Укажите количество, которое нужно отделить.",
+  Split: "Разделить",
+  Abundant: "Обильные",
+  "Never remove this ammunition when used.": "Не уменьшать количество этих боеприпасов при использовании.",
+  Container: "Контейнер",
+  Axes: "Топоры",
+  "Blades, Heavy": "Тяжёлые клинки",
+  "Blades, Light": "Лёгкие клинки",
+  Bows: "Луки",
+  Close: "Тычковое",
+  Crossbows: "Арбалеты",
+  Double: "Двустороннее",
+  Firearms: "Огнестрельное",
+  Flails: "Гибкое",
+  Hammers: "Молоты",
+  Monk: "Монашеское",
+  Natural: "Естественное",
+  Polearms: "Древковое",
+  "Siege Engines": "Осадное",
+  Spears: "Копья",
+  Thrown: "Метательное",
+  Tribal: "Племенное"
 };
 
 const journalReferences = {
@@ -306,6 +466,57 @@ function setTranslation(path, value) {
 function applyRussianTranslations() {
   if (!isRussian()) return;
   for (const [path, value] of Object.entries(RU_OVERRIDES)) setTranslation(path, value);
+  refreshLocalizedPf1Config();
+}
+
+function refreshLocalizedPf1Config() {
+  if (!globalThis.pf1?.config) return;
+
+  const entries = [
+    [pf1.config.weaponGroups, "axes", "PF1.WeaponGroupAxes"],
+    [pf1.config.weaponGroups, "bladesHeavy", "PF1.WeaponGroupBladesHeavy"],
+    [pf1.config.weaponGroups, "bladesLight", "PF1.WeaponGroupBladesLight"],
+    [pf1.config.weaponGroups, "bows", "PF1.WeaponGroupBows"],
+    [pf1.config.weaponGroups, "close", "PF1.WeaponGroupClose"],
+    [pf1.config.weaponGroups, "crossbows", "PF1.WeaponGroupCrossbows"],
+    [pf1.config.weaponGroups, "double", "PF1.WeaponGroupDouble"],
+    [pf1.config.weaponGroups, "firearms", "PF1.WeaponGroupFirearms"],
+    [pf1.config.weaponGroups, "flails", "PF1.WeaponGroupFlails"],
+    [pf1.config.weaponGroups, "hammers", "PF1.WeaponGroupHammers"],
+    [pf1.config.weaponGroups, "monk", "PF1.WeaponGroupMonk"],
+    [pf1.config.weaponGroups, "natural", "PF1.WeaponGroupNatural"],
+    [pf1.config.weaponGroups, "polearms", "PF1.WeaponGroupPolearms"],
+    [pf1.config.weaponGroups, "siegeEngines", "PF1.WeaponGroupSiegeEngines"],
+    [pf1.config.weaponGroups, "spears", "PF1.WeaponGroupSpears"],
+    [pf1.config.weaponGroups, "thrown", "PF1.WeaponGroupThrown"],
+    [pf1.config.weaponGroups, "tribal", "PF1.WeaponGroupTribal"],
+    [pf1.config.ammoTypes, "arrow", "PF1.AmmoTypeArrow"],
+    [pf1.config.ammoTypes, "bolt", "PF1.AmmoTypeBolt"],
+    [pf1.config.ammoTypes, "repeatingBolt", "PF1.AmmoTypeRepeatingBolt"],
+    [pf1.config.ammoTypes, "slingBullet", "PF1.AmmoTypeBulletSling"],
+    [pf1.config.ammoTypes, "gunBullet", "PF1.AmmoTypeBulletGun"],
+    [pf1.config.ammoTypes, "dragoonBullet", "PF1.AmmoTypeBulletDragoon"],
+    [pf1.config.ammoTypes, "dart", "PF1.AmmoTypeDart"],
+    [pf1.config.ammoTypes, "siege", "PF1.AmmoTypeSiege"],
+    [pf1.config.languages, "androffan", "PF1.LanguageAndroffan"],
+    [pf1.config.bonusModifiers, "haste", "PF1.BonusModifierHaste"],
+    [pf1.config.conditionTypes, "deathEffects", "PF1.CondTypeDeathEffects"],
+    [pf1.config.abilityActivationTypes, "nonaction", "PF1.ActivationTypeNonaction"],
+    [pf1.config.abilityActivationTypes, "aoo", "PF1.ActivationTypeAoO"],
+    [pf1.config.abilityActivationTypes_unchained, "nonaction", "PF1.ActivationTypeNonaction"],
+    [pf1.config.abilityActivationTypes_unchained, "aoo", "PF1.ActivationTypeAoO"],
+    [pf1.config.timePeriods, "turn", "PF1.TimeTurn"]
+  ];
+
+  for (const [collection, key, translationKey] of entries) {
+    if (collection && key in collection) collection[key] = RU_OVERRIDES[translationKey];
+  }
+
+  if (pf1.config.buffTargets?.unskills) pf1.config.buffTargets.unskills.label = RU_OVERRIDES["PF1.BuffTarUntrainedSkills"];
+  if (pf1.config.buffTargets?.carryStr) pf1.config.buffTargets.carryStr.label = RU_OVERRIDES["PF1.CarryStrength"];
+  if (pf1.config.buffTargets?.carryMult) pf1.config.buffTargets.carryMult.label = RU_OVERRIDES["PF1.CarryMultiplier"];
+  if (pf1.config.buffTargetCategories?.defense) pf1.config.buffTargetCategories.defense.label = RU_OVERRIDES["PF1.Defense"];
+  if (pf1.config.contextNoteCategories?.defense) pf1.config.contextNoteCategories.defense.label = RU_OVERRIDES["PF1.Defense"];
 }
 
 function russianSpellWord(quantity) {
@@ -318,12 +529,22 @@ function russianSpellWord(quantity) {
   return "заклинаний";
 }
 
+function russianNewItemName(typeLabel) {
+  const label = String(typeLabel ?? "предмет").trim() || "предмет";
+  const lowerLabel = label.charAt(0).toLocaleLowerCase("ru-RU") + label.slice(1);
+  const feminine = /(?:^|\s)(?:атака|черта|добыча|раса|способность|особенность)(?:\s|$)/i.test(label);
+  const neuter = /(?:^|\s)(?:оружие|снаряжение|заклинание)(?:\s|$)/i.test(label);
+  const adjective = feminine ? "Новая" : neuter ? "Новое" : "Новый";
+  return `${adjective} ${lowerLabel}`;
+}
+
 function installPluralFormatting() {
   if (game.i18n.__pf1eRuImprovementsFormat) return;
   const original = game.i18n.format.bind(game.i18n);
 
   game.i18n.format = function (stringId, data = {}) {
     if (isRussian()) {
+      if (stringId === "PF1.NewItem") return russianNewItemName(data.type);
       if (stringId === "PF1.PrepareMoreSpell" || stringId === "PF1.PrepareMoreSpells") {
         const quantity = Number(data.quantity ?? 1);
         return `Вы можете подготовить на ${quantity} ${russianSpellWord(quantity)} больше`;
@@ -417,7 +638,22 @@ function pluralizeRenderedWarnings(value) {
 }
 
 function translateText(value) {
-  return pluralizeRenderedWarnings(value)
+  const exact = (() => {
+    const leading = value.match(/^\s*/)?.[0] ?? "";
+    const trailing = value.match(/\s*$/)?.[0] ?? "";
+    const content = value.slice(leading.length, value.length - trailing.length || undefined);
+    const replacement = EXACT_RENDERED_TRANSLATIONS[content];
+    return replacement === undefined ? value : `${leading}${replacement}${trailing}`;
+  })();
+
+  return pluralizeRenderedWarnings(exact)
+    .replace(/([^\r\n]+?)\s+Ability Test\b/gi, (_, ability) => `Проверка характеристики ${ability.trim()}`)
+    .replace(/\bFortitude Saving Throw\b/gi, "Испытание Стойкости")
+    .replace(/\bReflex Saving Throw\b/gi, "Испытание Реакции")
+    .replace(/\bWill Saving Throw\b/gi, "Испытание Воли")
+    .replace(/\bSaving Throw\b/g, "Испытание")
+    .replace(/\bInitiative Check\b/g, "Проверка инициативы")
+    .replace(/\bTake\s+(10|20)\b/g, "Взять $1")
     .replace(/([^\r\n]+?)\s+Skill Check\b/gi, (_, skill) => `Проверка навыка ${skill.trim()}`)
     .replace(/\bBase Dice\b/g, "Натуральная кость")
     .replace(/\bCreate Item for\b/g, "Создать предмет для")
@@ -442,12 +678,28 @@ function translateText(value) {
     .replace(/формула СЛ/g, "Формула СЛ")
     .replace(/Неопределённый/g, "Не определён")
     .replace(/Очки здоровья/g, "Пункты здоровья")
+    .replace(/\bDelete Item:\s*/g, "Удалить предмет: ")
+    .replace(/\bSplit item:\s*/g, "Разделить предмет: ")
+    .replace(/\bSell Value:\s*/g, "Цена продажи: ")
+    .replace(/\bGP\b/g, "ЗМ")
+    .replace(/\bSP\b/g, "СМ")
+    .replace(/\bCP\b/g, "ММ")
     .replace(/Search filter(?:\.\.\.|…)/gi, "Поиск...")
     .replace(/(\d)\s*ft\.?(?=\s|$)/gi, "$1 фт.")
     .replace(/\bft\.(?=\s|$)/gi, "фт.")
     .replace(/\bft\b/gi, "фт")
     .replace(/\blbs?\b/gi, "фнт")
     .replace(/\bIb\b/g, "фнт");
+}
+
+function prepareRussianSaveRoll(_actor, rollOptions, savingThrowId) {
+  if (!isRussian() || !rollOptions) return;
+  const flavor = {
+    fort: "Испытание Стойкости",
+    ref: "Испытание Реакции",
+    will: "Испытание Воли"
+  }[savingThrowId];
+  if (flavor) rollOptions.flavor = flavor;
 }
 
 function findSkillJournalUuid({ actor, skillId, label } = {}) {
@@ -858,6 +1110,7 @@ Hooks.on("renderItemSheet", (app, html) => {
 });
 Hooks.on("renderChatMessage", processChatMessage);
 Hooks.on("pf1PreActorRollSkill", prepareRussianSkillRoll);
+Hooks.on("pf1PreActorRollSave", prepareRussianSaveRoll);
 Hooks.on("renderApplication", (app, html) => {
   const root = html?.[0] ?? html;
   translateRenderedHtml(root);

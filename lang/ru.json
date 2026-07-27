@@ -140,7 +140,120 @@
         "Psychic": "Экстрасенсорный",
         "Alchemy": "Алхимический"
       }
+    },
+    "AbilityTest": "Проверка характеристики {ability}",
+    "TakeX": "Взять {number}",
+    "InitiativeCheck": "{name}: Проверка инициативы",
+    "Roll": "Бросок",
+    "SavingThrow": "Испытание",
+    "SavingThrowRoll": "Испытание {save}",
+    "AddEntry": "Добавить запись",
+    "Operator": "Условие",
+    "CondTypeDeathEffects": "Эффекты смерти",
+    "LanguageAndroffan": "Андроффан",
+    "Notes": "Заметки",
+    "NewItem": "Новый {type}",
+    "WeaponGroupAxes": "Топоры",
+    "WeaponGroupBladesHeavy": "Тяжёлые клинки",
+    "WeaponGroupBladesLight": "Лёгкие клинки",
+    "WeaponGroupBows": "Луки",
+    "WeaponGroupClose": "Тычковое",
+    "WeaponGroupCrossbows": "Арбалеты",
+    "WeaponGroupDouble": "Двустороннее",
+    "WeaponGroupFirearms": "Огнестрельное",
+    "WeaponGroupFlails": "Гибкое",
+    "WeaponGroupHammers": "Молоты",
+    "WeaponGroupMonk": "Монашеское",
+    "WeaponGroupNatural": "Естественное",
+    "WeaponGroupPolearms": "Древковое",
+    "WeaponGroupSiegeEngines": "Осадное",
+    "WeaponGroupSpears": "Копья",
+    "WeaponGroupThrown": "Метательное",
+    "WeaponGroupTribal": "Племенное",
+    "LinkHelpChildren": "Связанные дочерние предметы удаляются из актёра при удалении родительского предмета связи (этого предмета).",
+    "LinkHelpCharges": "Связанные предметы наследуют и совместно используют заряды родительского предмета связи (этого предмета).",
+    "DeleteItem": "Удалить предмет",
+    "DeleteItemTitle": "Удалить предмет: {name}",
+    "Hidden": "Скрыто",
+    "ActivationTypeNonaction": "Не требует действия",
+    "ActivationTypeAoO": "Внеочередная атака",
+    "TimeTurn": "Ход",
+    "AmmunitionSubtype": "Тип боеприпаса",
+    "AmmoTypeArrow": "Стрела",
+    "AmmoTypeBolt": "Арбалетный болт",
+    "AmmoTypeRepeatingBolt": "Арбалетный болт (многозарядный)",
+    "AmmoTypeBulletSling": "Ядро",
+    "AmmoTypeBulletGun": "Пуля",
+    "AmmoTypeBulletDragoon": "Пуля (Драгунское огнестрельное оружие)",
+    "AmmoTypeDart": "Дротик",
+    "AmmoTypeSiege": "Осадный боеприпас",
+    "BonusModifierHaste": "Ускорение",
+    "Haste": "Ускорение",
+    "BuffTarUntrainedSkills": "Навыки без изучения",
+    "CarryStrength": "Силу переноски",
+    "CarryMultiplier": "Модификатор переноски",
+    "GiveItem": "Передать предмет актёру",
+    "SplitItem": "Разделить предмет",
+    "Split": "Разделить",
+    "Abundant": "Обильные",
+    "AbundantDesc": "Не уменьшать количество этих боеприпасов при использовании.",
+    "ItemContainerSellValue": "Цена продажи: {gp} ЗМ, {sp} СМ, {cp} ММ",
+    "Application": {
+      "DamageResistanceSelector": {
+        "DRTitle": "Выбор снижения урона",
+        "ERTitle": "Выбор невосприимчивости к энергии",
+        "DamageAmount": "Количество",
+        "Bypassed": "Преодолевает",
+        "Resisted": "Против",
+        "TypeNothing": "Никакое",
+        "CombinationType": "Условие",
+        "CombinationOr": "или",
+        "CombinationAnd": "и",
+        "CombinationFormattedOr": "{type1} или {type2}",
+        "CombinationFormattedAnd": "{type1} и {type2}"
+      },
+      "EntrySelector": {
+        "Title": "Выбор записи"
+      },
+      "ChangeTargetSelector": {
+        "Title": "Выбрать цель изменения"
+      },
+      "TraitSelector": {
+        "CustomHint": "Несколько значений можно разделить точкой с запятой (;)."
+      }
+    },
+    "Info": {
+      "NotFunctioning": "В настоящее время система не использует эту функцию."
+    },
+    "ScriptCalls": {
+      "Name": "Вызовы скриптов",
+      "NewName": "Новый вызов скрипта",
+      "Create": "Создать встроенный вызов скрипта",
+      "Use": {
+        "Name": "Использование",
+        "Info": "Вызывается, когда предмет был «использован» — например, при атаке, выпивании зелья и т. п. Содержит дополнительную переменную `attacks` — массив бросков атаки этого действия, если они есть."
+      },
+      "Equip": {
+        "Name": "Экипировка",
+        "Info": "Вызывается, когда предмет экипируют или снимают. Содержит дополнительную переменную `equipped`, принимающую значение `true` или `false`."
+      },
+      "ChangeQuantity": {
+        "Name": "Изменение количества",
+        "Info": "Вызывается при изменении количества предмета. Содержит дополнительные переменные `quantity.previous` и `quantity.new`, обе из которых являются числами."
+      }
+    },
+    "Dialog": {
+      "SplitItem": {
+        "Title": "Разделить предмет: {name}",
+        "Desc": "Укажите количество, которое нужно отделить."
+      }
+    },
+    "Sheet": {
+      "Container": "Контейнер"
     }
+  },
+  "ITEM": {
+    "TypeContainer": "Контейнер"
   },
   "PF1.ACNormal": "КБ",
   "PF1.ACTouch": "Касание",
