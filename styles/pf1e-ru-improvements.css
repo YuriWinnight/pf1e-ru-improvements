@@ -226,11 +226,22 @@
   height: auto;
   left: 50%;
   margin: 0 !important;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
   padding: 0 !important;
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
   width: max-content;
+}
+
+.pf1alt.sheet.actor li.attribute.dr > .attribute-value.high > ul.resistance-list:not(:has(> li))::-webkit-scrollbar,
+.pf1alt.sheet.actor li.attribute.eres > .attribute-value.high > ul.resistance-list:not(:has(> li))::-webkit-scrollbar,
+.pf1e-pg-alt-sheet.sheet.actor li.attribute.dr > .attribute-value.high > ul.resistance-list:not(:has(> li))::-webkit-scrollbar,
+.pf1e-pg-alt-sheet.sheet.actor li.attribute.eres > .attribute-value.high > ul.resistance-list:not(:has(> li))::-webkit-scrollbar {
+  display: none;
+  height: 0;
+  width: 0;
 }
 
 .pf1alt.sheet.actor .point-buy-button,
