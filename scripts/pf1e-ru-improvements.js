@@ -14,6 +14,19 @@ const DOM_TRANSLATION_EXCLUDED_SELECTOR = [
   ".journal-entry-content",
   ".journal-page-content"
 ].join(", ");
+const ITEM_CREATION_DIALOG_CLASSES = new Set([
+  "create-consumable",
+  "add-character-class",
+  "apply-hit-points"
+]);
+const ACTOR_ROLL_DIALOG_CLASSES = new Set([
+  "die-roll",
+  "roll-initiative",
+  "duplicate-initiative",
+  "damage-roll",
+  "use-attack"
+]);
+const newlyCreatedItemKeys = new Set();
 
 function createAthleticsSkillData() {
   return {
@@ -808,9 +821,29 @@ function redirectChatSkillReference(message, root) {
   }
 }
 
+function translateActorRollFlavor(root) {
+  if (!isRussian() || !(root instanceof HTMLElement)) return;
+  const flavor = root.querySelector(".flavor-text");
+  if (!(flavor instanceof HTMLElement)) return;
+
+  const value = flavor.textContent ?? "";
+  const translated = pluralizeRenderedWarnings(value)
+    .replace(/([^\r\n]+?)\s+Ability Test\b/gi, (_, ability) => `Проверка характеристики ${ability.trim()}`)
+    .replace(/\bFortitude Saving Throw\b/gi, "Испытание Стойкости")
+    .replace(/\bReflex Saving Throw\b/gi, "Испытание Реакции")
+    .replace(/\bWill Saving Throw\b/gi, "Испытание Воли")
+    .replace(/\bSaving Throw\b/g, "Испытание")
+    .replace(/\bInitiative Check\b/g, "Проверка инициативы")
+    .replace(/\bTake\s+(10|20)\b/g, "Взять $1")
+    .replace(/([^\r\n]+?)\s+Skill Check\b/gi, (_, skill) => `Проверка навыка ${skill.trim()}`)
+    .replace(/^\s*Roll\s*$/g, "Бросок");
+
+  if (translated !== value) flavor.textContent = translated;
+}
+
 function processChatMessage(message, html) {
   const root = html?.[0] ?? html;
-  translateRenderedHtml(root);
+  translateActorRollFlavor(root);
   redirectChatSkillReference(message, root);
 }
 
@@ -826,6 +859,58 @@ function processRenderedChatMessages() {
     const message = game.messages.get(root.dataset.messageId);
     if (message) processChatMessage(message, root);
   }
+}
+
+function isItemCreationDialog(app, root) {
+  if (!(root instanceof HTMLElement)) return false;
+  const classes = Array.from(app?.options?.classes ?? []);
+  if (classes.some((className) => ITEM_CREATION_DIALOG_CLASSES.has(className))) return true;
+
+  const appElement = app?.element?.[0] ?? app?.element;
+  const dialogRoot = appElement instanceof HTMLElement ? appElement : root;
+  const selector = Array.from(ITEM_CREATION_DIALOG_CLASSES, (className) => `.${className}`).join(", ");
+  if (dialogRoot.matches(selector) || dialogRoot.querySelector(selector)) return true;
+
+  const constructorName = String(app?.constructor?.name ?? "");
+  const documentName = app?.options?.documentName
+    ?? app?.documentName
+    ?? app?.object?.documentName;
+  return documentName === "Item" && /create/i.test(constructorName);
+}
+
+function isActorRollDialog(app, root) {
+  if (!(root instanceof HTMLElement)) return false;
+  const classes = Array.from(app?.options?.classes ?? []);
+  if (classes.some((className) => ACTOR_ROLL_DIALOG_CLASSES.has(className))) return true;
+
+  const appElement = app?.element?.[0] ?? app?.element;
+  const dialogRoot = appElement instanceof HTMLElement ? appElement : root;
+  const selector = Array.from(ACTOR_ROLL_DIALOG_CLASSES, (className) => `.${className}`).join(", ");
+  return dialogRoot.matches(selector) || Boolean(dialogRoot.querySelector(selector));
+}
+
+function itemTrackingKey(item) {
+  return item?.uuid ?? item?.id ?? null;
+}
+
+function rememberNewlyCreatedItem(item, userId) {
+  if (userId !== game.user.id) return;
+  const key = itemTrackingKey(item);
+  if (!key) return;
+  newlyCreatedItemKeys.add(key);
+  setTimeout(() => newlyCreatedItemKeys.delete(key), 300000);
+}
+
+function isNewlyCreatedItemSheet(app) {
+  if (app?.__pf1eRuNewItemSheet) return true;
+  const item = app?.item
+    ?? (app?.object?.documentName === "Item" ? app.object : null)
+    ?? (app?.document?.documentName === "Item" ? app.document : null);
+  const key = itemTrackingKey(item);
+  if (!key || !newlyCreatedItemKeys.has(key)) return false;
+  newlyCreatedItemKeys.delete(key);
+  app.__pf1eRuNewItemSheet = true;
+  return true;
 }
 
 function trackConsumableIconChoice(app, root) {
@@ -1111,10 +1196,12 @@ function makeActorSheetResponsive(app, root) {
   updateLayout();
 }
 
-function installDomTranslationObserver() {
-  if (!isRussian() || game.i18n.__pf1eRuImprovementsObserver) return;
+function installActorSheetTranslationObserver(app, root) {
+  if (!isRussian() || !(root instanceof HTMLElement)) return;
+  const current = app?.__pf1eRuTranslationObserver;
+  if (current?.root === root) return;
+  current?.observer?.disconnect();
 
-  translateRenderedHtml(document.body);
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
@@ -1123,8 +1210,8 @@ function installDomTranslationObserver() {
       }
     }
   });
-  observer.observe(document.body, { childList: true, subtree: true });
-  game.i18n.__pf1eRuImprovementsObserver = observer;
+  observer.observe(root, { childList: true, subtree: true });
+  app.__pf1eRuTranslationObserver = { root, observer };
 }
 
 function redirectReferenceBooks(root) {
@@ -1165,6 +1252,7 @@ function enableSensesScrolling(root) {
 function processActorSheet(app, html) {
   const root = html?.[0] ?? html;
   translateRenderedHtml(root);
+  installActorSheetTranslationObserver(app, root);
   redirectReferenceBooks(root);
   enableSensesScrolling(root);
   makeActorSheetResponsive(app, root);
@@ -1179,7 +1267,6 @@ Hooks.once("init", () => {
 
 Hooks.once("ready", async () => {
   applyRussianTranslations();
-  installDomTranslationObserver();
   await collectCompendiumReferences();
   processRenderedChatMessages();
 
@@ -1199,27 +1286,42 @@ Hooks.on("createActor", (actor) => {
 });
 Hooks.on("closeActorSheet", (app) => {
   app?.__pf1eRuResponsiveLayout?.observer?.disconnect();
+  app?.__pf1eRuTranslationObserver?.observer?.disconnect();
   delete app?.__pf1eRuResponsiveLayout;
+  delete app?.__pf1eRuTranslationObserver;
 });
 Hooks.on("renderItemSheet", (app, html) => {
+  if (!isNewlyCreatedItemSheet(app)) return;
   const root = html?.[0] ?? html;
   translateRenderedHtml(root);
   translateItemApplication(app, root);
+});
+Hooks.on("closeItemSheet", (app) => {
+  const item = app?.item
+    ?? (app?.object?.documentName === "Item" ? app.object : null)
+    ?? (app?.document?.documentName === "Item" ? app.document : null);
+  const key = itemTrackingKey(item);
+  if (key) newlyCreatedItemKeys.delete(key);
+  delete app?.__pf1eRuNewItemSheet;
 });
 Hooks.on("renderChatMessage", processChatMessage);
 Hooks.on("pf1PreActorRollSkill", prepareRussianSkillRoll);
 Hooks.on("pf1PreActorRollSave", prepareRussianSaveRoll);
 Hooks.on("renderApplication", (app, html) => {
   const root = html?.[0] ?? html;
-  translateRenderedHtml(root);
-  translateItemApplication(app, root);
+  if (app?.id === "settings-editor") translateRenderedHtml(root);
   makeSettingsEditorResizable(app, root);
 });
 Hooks.on("renderDialog", (app, html) => {
   const root = html?.[0] ?? html;
+  const isCreation = isItemCreationDialog(app, root);
+  if (!isCreation && !isActorRollDialog(app, root)) return;
   translateRenderedHtml(root);
-  trackConsumableIconChoice(app, root);
+  if (isCreation) trackConsumableIconChoice(app, root);
 });
 Hooks.on("renderSensesSelector", (_app, html) => translateRenderedHtml(html?.[0] ?? html));
 Hooks.on("renderTokenConfig", (_app, html) => translateRenderedHtml(html?.[0] ?? html));
-Hooks.on("createItem", handleCreatedConsumable);
+Hooks.on("createItem", (item, options, userId) => {
+  rememberNewlyCreatedItem(item, userId);
+  void handleCreatedConsumable(item, options, userId);
+});
