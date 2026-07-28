@@ -343,8 +343,12 @@ const RU_OVERRIDES = {
   "PF1.ScriptCalls.Use.Info": "Вызывается, когда предмет был «использован» — например, при атаке, выпивании зелья и т. п. Содержит дополнительную переменную `attacks` — массив бросков атаки этого действия, если они есть.",
   "PF1.ScriptCalls.Equip.Name": "Экипировка",
   "PF1.ScriptCalls.Equip.Info": "Вызывается, когда предмет экипируют или снимают. Содержит дополнительную переменную `equipped`, принимающую значение `true` или `false`.",
+  "PF1.ScriptCalls.Toggle.Name": "Переключение",
+  "PF1.ScriptCalls.Toggle.Info": "Вызывается при включении или отключении элемента. Содержит дополнительную переменную `state`, принимающую значение `true` или `false`.",
   "PF1.ScriptCalls.ChangeQuantity.Name": "Изменение количества",
   "PF1.ScriptCalls.ChangeQuantity.Info": "Вызывается при изменении количества предмета. Содержит дополнительные переменные `quantity.previous` и `quantity.new`, обе из которых являются числами.",
+  "PF1.ScriptCalls.ChangeLevel.Name": "Изменение уровня",
+  "PF1.ScriptCalls.ChangeLevel.Info": "Вызывается при изменении уровня элемента. Содержит дополнительные переменные `quantity.previous` и `quantity.new`; обе имеют числовое значение.",
   "PF1.Hidden": "Скрыто",
   "PF1.ActivationTypeNonaction": "Не требует действия",
   "PF1.ActivationTypeAoO": "Внеочередная атака",
@@ -378,6 +382,12 @@ const RU_OVERRIDES = {
 const EXACT_RENDERED_TRANSLATIONS = {
   Use: "Использование",
   Equip: "Экипировка",
+  Toggle: "Переключение",
+  "Change Level": "Изменение уровня",
+  "Called when the item has been enabled or disabled. Has the extra variable `state`, which is either `true` or `false`.":
+    "Вызывается при включении или отключении элемента. Содержит дополнительную переменную `state`, принимающую значение `true` или `false`.",
+  "Called when the level of the item has been changed. Has the extra variables `quantity.previous` and `quantity.new`, which are both numbers.":
+    "Вызывается при изменении уровня элемента. Содержит дополнительные переменные `quantity.previous` и `quantity.new`; обе имеют числовое значение.",
   "You can hold Shift to bypass this dialog.": "Чтобы пропустить это окно, зажмите Shift.",
   "Your hit points for this level will be rolled for based on the size of your hit die.":
     "Количество пунктов здоровья, получаемых на этом уровне, будет определено броском кости здоровья вашего класса.",
