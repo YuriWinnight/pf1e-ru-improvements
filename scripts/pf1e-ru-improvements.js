@@ -376,6 +376,8 @@ const RU_OVERRIDES = {
 };
 
 const EXACT_RENDERED_TRANSLATIONS = {
+  Use: "Использование",
+  Equip: "Экипировка",
   "You can hold Shift to bypass this dialog.": "Чтобы пропустить это окно, зажмите Shift.",
   "Your hit points for this level will be rolled for based on the size of your hit die.":
     "Количество пунктов здоровья, получаемых на этом уровне, будет определено броском кости здоровья вашего класса.",
