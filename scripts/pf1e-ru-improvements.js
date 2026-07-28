@@ -5,6 +5,15 @@ const CONDITIONS_JOURNAL_ID = "RuConditionsJrnl";
 const ATHLETICS_SETTING = "enableAthleticsSkill";
 const ATHLETICS_SKILL_ID = "athletics";
 const ATHLETICS_ACTOR_TYPES = new Set(["character", "npc"]);
+const DOM_TRANSLATION_EXCLUDED_SELECTOR = [
+  "[contenteditable]",
+  ".ProseMirror",
+  ".tox-edit-area",
+  ".mce-content-body",
+  ".editor-content",
+  ".journal-entry-content",
+  ".journal-page-content"
+].join(", ");
 
 function createAthleticsSkillData() {
   return {
@@ -901,24 +910,53 @@ async function handleCreatedConsumable(item, _options, userId) {
   await chooseConsumableIcon(item, pending.type);
 }
 
-function translateRenderedHtml(root) {
-  if (!isRussian() || !(root instanceof HTMLElement)) return;
+function isDomTranslationExcluded(element) {
+  return element instanceof Element
+    && (element.matches(DOM_TRANSLATION_EXCLUDED_SELECTOR)
+      || Boolean(element.closest(DOM_TRANSLATION_EXCLUDED_SELECTOR)));
+}
 
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  const textNodes = [];
-  while (walker.nextNode()) textNodes.push(walker.currentNode);
-  for (const node of textNodes) {
-    const translated = translateText(node.nodeValue);
-    if (translated !== node.nodeValue) node.nodeValue = translated;
+function translateElementAttributes(element) {
+  if (!(element instanceof Element)) return;
+  if (!element.matches("[placeholder], [title], [data-tooltip]")) return;
+
+  for (const attribute of ["placeholder", "title", "data-tooltip"]) {
+    if (!element.hasAttribute(attribute)) continue;
+    const value = element.getAttribute(attribute);
+    const translated = translateText(value);
+    if (translated !== value) element.setAttribute(attribute, translated);
   }
+}
 
-  for (const element of root.querySelectorAll("[placeholder], [title], [data-tooltip]")) {
-    for (const attribute of ["placeholder", "title", "data-tooltip"]) {
-      if (!element.hasAttribute(attribute)) continue;
-      const value = element.getAttribute(attribute);
-      const translated = translateText(value);
-      if (translated !== value) element.setAttribute(attribute, translated);
+function translateRenderedHtml(root) {
+  if (!isRussian() || !(root instanceof HTMLElement) || isDomTranslationExcluded(root)) return;
+
+  translateElementAttributes(root);
+  const walker = document.createTreeWalker(
+    root,
+    NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+    {
+      acceptNode(node) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          if (node.matches(DOM_TRANSLATION_EXCLUDED_SELECTOR)) return NodeFilter.FILTER_REJECT;
+          return node.matches("[placeholder], [title], [data-tooltip]")
+            ? NodeFilter.FILTER_ACCEPT
+            : NodeFilter.FILTER_SKIP;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
     }
+  );
+
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    if (node.nodeType === Node.TEXT_NODE) {
+      const translated = translateText(node.nodeValue);
+      if (translated !== node.nodeValue) node.nodeValue = translated;
+      continue;
+    }
+
+    translateElementAttributes(node);
   }
 }
 
