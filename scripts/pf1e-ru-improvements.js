@@ -1117,10 +1117,18 @@ function redirectReferenceBooks(root) {
   }
 }
 
+function enableSensesScrolling(root) {
+  if (!(root instanceof HTMLElement)) return;
+  for (const value of root.querySelectorAll("li.attribute.senses > .attribute-value")) {
+    value.classList.add("scroll", "high");
+  }
+}
+
 function processActorSheet(app, html) {
   const root = html?.[0] ?? html;
   translateRenderedHtml(root);
   redirectReferenceBooks(root);
+  enableSensesScrolling(root);
   makeActorSheetResponsive(app, root);
 }
 
