@@ -490,6 +490,10 @@ function refreshLocalizedPf1Config() {
     [pf1.config.weaponGroups, "spears", "PF1.WeaponGroupSpears"],
     [pf1.config.weaponGroups, "thrown", "PF1.WeaponGroupThrown"],
     [pf1.config.weaponGroups, "tribal", "PF1.WeaponGroupTribal"],
+    [pf1.config.senses, "bse", "PF1.SenseBSense"],
+    [pf1.config.senses, "si", "PF1.SenseSI"],
+    [pf1.config.senses, "sid", "PF1.SenseSID"],
+    [pf1.config.senses, "sc", "PF1.SenseSC"],
     [pf1.config.ammoTypes, "arrow", "PF1.AmmoTypeArrow"],
     [pf1.config.ammoTypes, "bolt", "PF1.AmmoTypeBolt"],
     [pf1.config.ammoTypes, "repeatingBolt", "PF1.AmmoTypeRepeatingBolt"],
@@ -661,6 +665,10 @@ function translateText(value) {
     .replace(/\be\.g\./gi, "например")
     .replace(/\bSpell Res\.?(?=\s|$)/g, "УкМ")
     .replace(/\bUse Point Buy\b/g, "Покупка")
+    .replace(/\bSee Invisibility\b/gi, "Увидеть невидимое")
+    .replace(/\bSee in darkness\b/gi, "Темновидение")
+    .replace(/\bBlindsense\b/gi, "Слепое чутьё")
+    .replace(/\bScent\b/gi, "Нюх")
     .replace(/\bCowering\b/g, "В оцепенении")
     .replace(/\bSqueezing\b/g, "Протискивается")
     .replace(/\bPrecision\b/g, "Точный")
@@ -860,7 +868,7 @@ function translateRenderedHtml(root) {
     if (translated !== node.nodeValue) node.nodeValue = translated;
   }
 
-  for (const element of root.querySelectorAll("input[placeholder], [title], [data-tooltip]")) {
+  for (const element of root.querySelectorAll("[placeholder], [title], [data-tooltip]")) {
     for (const attribute of ["placeholder", "title", "data-tooltip"]) {
       if (!element.hasAttribute(attribute)) continue;
       const value = element.getAttribute(attribute);
@@ -885,7 +893,7 @@ function replaceExactRenderedText(root, replacements) {
     if (replacement !== undefined) node.nodeValue = `${leading}${replacement}${trailing}`;
   }
 
-  for (const element of root.querySelectorAll("input[placeholder], [title], [data-tooltip]")) {
+  for (const element of root.querySelectorAll("[placeholder], [title], [data-tooltip]")) {
     for (const attribute of ["placeholder", "title", "data-tooltip"]) {
       const value = element.getAttribute(attribute);
       if (value !== null && replacements[value] !== undefined) {
