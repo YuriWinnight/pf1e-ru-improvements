@@ -1070,6 +1070,24 @@ function replaceExactRenderedText(root, replacements) {
   }
 }
 
+function translateDamageTypeSelector(root) {
+  if (!isRussian() || !(root instanceof HTMLElement)) return;
+  const selector = root.matches("form.pf1.damage-type-selector")
+    ? root
+    : root.querySelector("form.pf1.damage-type-selector");
+  if (!selector) return;
+
+  const translations = {
+    Precision: "Точный",
+    Untyped: "Без типа"
+  };
+
+  for (const label of selector.querySelectorAll(".damage-type .name")) {
+    const value = label.textContent?.trim();
+    if (translations[value]) label.textContent = translations[value];
+  }
+}
+
 function translateItemApplication(app, root) {
   if (!isRussian() || !(root instanceof HTMLElement)) return;
   const item = app?.item
@@ -1320,6 +1338,7 @@ Hooks.on("renderDialog", (app, html) => {
   if (isCreation) trackConsumableIconChoice(app, root);
 });
 Hooks.on("renderSensesSelector", (_app, html) => translateRenderedHtml(html?.[0] ?? html));
+Hooks.on("renderDamageTypeSelector", (_app, html) => translateDamageTypeSelector(html?.[0] ?? html));
 Hooks.on("renderTokenConfig", (_app, html) => translateRenderedHtml(html?.[0] ?? html));
 Hooks.on("createItem", (item, options, userId) => {
   rememberNewlyCreatedItem(item, userId);
