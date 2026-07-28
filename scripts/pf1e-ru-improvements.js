@@ -262,6 +262,23 @@ const RU_OVERRIDES = {
   "PF1.CustomHitDice": "Настроить КЗ",
   "PF1.CustomHitDiceHint": "Вставьте формулу, например floor(@item.level / 2)",
   "PF1.HitPoints": "Пункты здоровья",
+  "PF1.LevelUp.Health.Roll.Desc":
+    "Количество пунктов здоровья, получаемых на этом уровне, будет определено броском кости здоровья вашего класса.",
+  "PF1.LevelUp.Health.Manual.Desc": "Вы сами определите, сколько пунктов здоровья получите на этом уровне.",
+  "PF1.LevelUp.FC.Label": "Бонус предпочитаемого класса",
+  "PF1.LevelUp.FC.HP.Desc":
+    "В качестве бонуса предпочитаемого класса на этом уровне вы получите 1 пункт здоровья.",
+  "PF1.LevelUp.FC.Skill.Desc":
+    "В качестве бонуса предпочитаемого класса на этом уровне вы получите 1 пункт навыка, который сможете распределить по своему усмотрению.",
+  "PF1.LevelUp.FC.Alt.Desc":
+    "В качестве бонуса предпочитаемого класса на этом уровне вы получите особый бонус, зависящий от сочетания вашей расы и класса.",
+  "PF1.FavouredClassBonus.Label": "Бонус предпочитаемого класса",
+  "PF1.FavouredClassBonus.HP": "Пункт здоровья",
+  "PF1.FavouredClassBonus.Skill": "Пункт навыка",
+  "PF1.FavouredClassBonus.Alt": "Альтернативный бонус",
+  "PF1.Info.AddClassDialog_Desc":
+    "Нажмите «Обычный», чтобы открыть короткий мастер настройки, или «Без изменений», чтобы добавить класс без каких-либо правок.",
+  "PF1.Raw": "Без изменений",
   "PF1.Spellcasting.Progression.Label": "Развитие",
   "PF1.Spellcasting.Type.Label": "Тип заклинания",
   "PF1.Spellcasting.Type.Arcane": "Мистический",
@@ -358,6 +375,19 @@ const RU_OVERRIDES = {
 };
 
 const EXACT_RENDERED_TRANSLATIONS = {
+  "Your hit points for this level will be rolled for based on the size of your hit die.":
+    "Количество пунктов здоровья, получаемых на этом уровне, будет определено броском кости здоровья вашего класса.",
+  "You will decide how many hit points you gain for this level.":
+    "Вы сами определите, сколько пунктов здоровья получите на этом уровне.",
+  "Favoured Class Bonus": "Бонус предпочитаемого класса",
+  "You will gain a single hit point as your favoured class bonus for this level.":
+    "В качестве бонуса предпочитаемого класса на этом уровне вы получите 1 пункт здоровья.",
+  "You will gain a single skill rank to freely spend as your favoured class bonus for this level.":
+    "В качестве бонуса предпочитаемого класса на этом уровне вы получите 1 пункт навыка, который сможете распределить по своему усмотрению.",
+  "You will gain something specific for your class and race combination as your favoured class bonus for this level.":
+    "В качестве бонуса предпочитаемого класса на этом уровне вы получите особый бонус, зависящий от сочетания вашей расы и класса.",
+  "Pressing Normal opens a short wizard, while pressing Raw will add the class without any alterations.":
+    "Нажмите «Обычный», чтобы открыть короткий мастер настройки, или «Без изменений», чтобы добавить класс без каких-либо правок.",
   "Damage Reduction Selection": "Выбор снижения урона",
   "Energy Resistance Selection": "Выбор невосприимчивости к энергии",
   Amount: "Количество",
