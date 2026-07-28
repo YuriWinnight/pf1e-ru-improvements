@@ -276,6 +276,7 @@ const RU_OVERRIDES = {
   "PF1.FavouredClassBonus.HP": "Пункт здоровья",
   "PF1.FavouredClassBonus.Skill": "Пункт навыка",
   "PF1.FavouredClassBonus.Alt": "Альтернативный бонус",
+  "PF1.Info.AddClassDialog": "Чтобы пропустить это окно, зажмите Shift.",
   "PF1.Info.AddClassDialog_Desc":
     "Нажмите «Обычный», чтобы открыть короткий мастер настройки, или «Без изменений», чтобы добавить класс без каких-либо правок.",
   "PF1.Raw": "Без изменений",
@@ -375,6 +376,7 @@ const RU_OVERRIDES = {
 };
 
 const EXACT_RENDERED_TRANSLATIONS = {
+  "You can hold Shift to bypass this dialog.": "Чтобы пропустить это окно, зажмите Shift.",
   "Your hit points for this level will be rolled for based on the size of your hit die.":
     "Количество пунктов здоровья, получаемых на этом уровне, будет определено броском кости здоровья вашего класса.",
   "You will decide how many hit points you gain for this level.":
