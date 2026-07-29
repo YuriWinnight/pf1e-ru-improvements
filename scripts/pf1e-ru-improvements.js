@@ -12,7 +12,8 @@ const DOM_TRANSLATION_EXCLUDED_SELECTOR = [
   ".mce-content-body",
   ".editor-content",
   ".journal-entry-content",
-  ".journal-page-content"
+  ".journal-page-content",
+  ".item[data-item-id]"
 ].join(", ");
 const ITEM_CREATION_DIALOG_CLASSES = new Set([
   "create-consumable",
