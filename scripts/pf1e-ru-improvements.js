@@ -13,7 +13,10 @@ const DOM_TRANSLATION_EXCLUDED_SELECTOR = [
   ".editor-content",
   ".journal-entry-content",
   ".journal-page-content",
-  ".item[data-item-id]"
+  ".item[data-item-id]",
+  ".tag[class*='custom']",
+  ".tooltipcontent-context",
+  ".pf1e-ru-user-content"
 ].join(", ");
 const ITEM_CREATION_DIALOG_CLASSES = new Set([
   "create-consumable",
@@ -27,6 +30,15 @@ const ACTOR_ROLL_DIALOG_CLASSES = new Set([
   "damage-roll",
   "use-attack"
 ]);
+const DAMAGE_REDUCTION_BYPASS_GROUPS = [
+  { label: "Тип физического урона", entries: [["slashing", "Режущее"], ["piercing", "Колющее"], ["bludgeoning", "Дробящее"]] },
+  { label: "Материалы", entries: [["silver", "Серебро"], ["coldiron", "Холодное железо"], ["adamantine", "Адамантин"]] },
+  { label: "Мировоззрение", entries: [["good", "Добро"], ["lawful", "Принципиальность"], ["evil", "Зло"], ["chaotic", "Хаос"]] },
+  { label: "Магические свойства", entries: [["magic", "Магия"], ["epic", "Эпическое"]] }
+];
+const DAMAGE_REDUCTION_BYPASS_TYPES = new Map(
+  DAMAGE_REDUCTION_BYPASS_GROUPS.flatMap((group) => group.entries)
+);
 const newlyCreatedItemKeys = new Set();
 
 function createAthleticsSkillData() {
@@ -322,7 +334,7 @@ const RU_OVERRIDES = {
   "PF1.Application.DamageResistanceSelector.DamageAmount": "Количество",
   "PF1.Application.DamageResistanceSelector.Bypassed": "Преодолевает",
   "PF1.Application.DamageResistanceSelector.Resisted": "Против",
-  "PF1.Application.DamageResistanceSelector.TypeNothing": "Никакое",
+  "PF1.Application.DamageResistanceSelector.TypeNothing": "Ничего",
   "PF1.Application.DamageResistanceSelector.CombinationType": "Условие",
   "PF1.Application.DamageResistanceSelector.CombinationOr": "или",
   "PF1.Application.DamageResistanceSelector.CombinationAnd": "и",
@@ -1087,6 +1099,73 @@ function translateDamageTypeSelector(root) {
     const value = label.textContent?.trim();
     if (translations[value]) label.textContent = translations[value];
   }
+
+  for (const element of selector.querySelectorAll(".damage-type[data-id]")) {
+    const entry = globalThis.pf1?.registry?.damageTypes?.get(element.dataset.id);
+    if (entry?.flags?.[MODULE_ID]?.damageReductionBypass) element.remove();
+  }
+}
+
+function registerDamageReductionBypassTypes(registry) {
+  for (const [id, name] of DAMAGE_REDUCTION_BYPASS_TYPES) {
+    if (registry.has(id)) continue;
+    registry.register(MODULE_ID, id, {
+      name,
+      category: "physical",
+      flags: { [MODULE_ID]: { damageReductionBypass: true } }
+    });
+  }
+}
+
+function enhanceResistanceSelector(app, root) {
+  if (!isRussian() || !(root instanceof HTMLElement)) return;
+  const form = root.matches("form") ? root : root.querySelector("form");
+  if (!form?.closest(".resistance") && !root.closest(".resistance") && app?.id !== "damage-resistance-selector") return;
+
+  for (const option of form.querySelectorAll('select option[value=""]')) {
+    option.textContent = "Ничего";
+  }
+  if (!app?.isDR) return;
+
+  for (const select of form.querySelectorAll('select[data-index="types0"], select[data-index="types1"]')) {
+    const rowIndex = Number(select.closest("tr.resistance")?.dataset.index);
+    const typeIndex = select.dataset.index === "types1" ? 1 : 0;
+    const selected = String(app.entries?.[rowIndex]?.types?.[typeIndex] ?? select.value ?? "");
+    const currentLabels = new Map([...select.options].map((option) => [option.value, option.textContent.trim()]));
+    const knownValues = new Set([""]);
+    select.replaceChildren();
+
+    const blank = document.createElement("option");
+    blank.value = "";
+    blank.textContent = "Ничего";
+    select.append(blank);
+
+    for (const group of DAMAGE_REDUCTION_BYPASS_GROUPS) {
+      const optgroup = document.createElement("optgroup");
+      optgroup.label = group.label;
+      for (const [id, fallbackLabel] of group.entries) {
+        const option = document.createElement("option");
+        option.value = id;
+        option.textContent = currentLabels.get(id)
+          ?? globalThis.pf1?.registry?.damageTypes?.get(id)?.name
+          ?? fallbackLabel;
+        optgroup.append(option);
+        knownValues.add(id);
+      }
+      select.append(optgroup);
+    }
+
+    if (selected && !knownValues.has(selected)) {
+      const optgroup = document.createElement("optgroup");
+      optgroup.label = "Другое";
+      const option = document.createElement("option");
+      option.value = selected;
+      option.textContent = currentLabels.get(selected) ?? selected;
+      optgroup.append(option);
+      select.append(optgroup);
+    }
+    select.value = selected;
+  }
 }
 
 function translateItemApplication(app, root) {
@@ -1225,6 +1304,7 @@ function installActorSheetTranslationObserver(app, root) {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
         if (!(node instanceof HTMLElement)) continue;
+        markActorSheetUserContent(app, node);
         translateRenderedHtml(node);
       }
     }
@@ -1268,14 +1348,46 @@ function enableSensesScrolling(root) {
   }
 }
 
+function markActorSheetUserContent(app, root) {
+  if (!(root instanceof HTMLElement)) return;
+  const actor = app?.actor ?? (app?.object?.documentName === "Actor" ? app.object : null);
+  if (!actor) return;
+
+  const skills = actor.system?.skills ?? {};
+  const skillSelector = ".skill[data-skill], .skill-name[data-skill], .sub-skill[data-main-skill]";
+  const skillElements = [...root.querySelectorAll(skillSelector)];
+  if (root.matches(skillSelector)) skillElements.unshift(root);
+  for (const element of skillElements) {
+    const mainSkillId = element.dataset.mainSkill ?? element.dataset.skill;
+    const isUserNamed = Boolean(element.dataset.mainSkill) || skills[mainSkillId]?.custom;
+    if (!isUserNamed) continue;
+    const name = element.matches(".skill-name")
+      ? element.querySelector("h4")
+      : element.querySelector(".skill-name h4");
+    name?.classList.add("pf1e-ru-user-content");
+  }
+
+  const spellbooks = actor.system?.attributes?.spells?.spellbooks ?? {};
+  const spellbookTabSelector = "nav.spellbooks > .item[data-tab]";
+  const spellbookTabs = [...root.querySelectorAll(spellbookTabSelector)];
+  if (root.matches(spellbookTabSelector)) spellbookTabs.unshift(root);
+  for (const tab of spellbookTabs) {
+    const customName = String(spellbooks[tab.dataset.tab]?.name ?? "").trim();
+    if (customName) tab.classList.add("pf1e-ru-user-content");
+  }
+}
+
 function processActorSheet(app, html) {
   const root = html?.[0] ?? html;
+  markActorSheetUserContent(app, root);
   translateRenderedHtml(root);
   installActorSheetTranslationObserver(app, root);
   redirectReferenceBooks(root);
   enableSensesScrolling(root);
   makeActorSheetResponsive(app, root);
 }
+
+Hooks.on("pf1RegisterDamageTypes", registerDamageReductionBypassTypes);
 
 Hooks.once("init", () => {
   registerAthleticsSetting();
@@ -1340,6 +1452,7 @@ Hooks.on("renderDialog", (app, html) => {
 });
 Hooks.on("renderSensesSelector", (_app, html) => translateRenderedHtml(html?.[0] ?? html));
 Hooks.on("renderDamageTypeSelector", (_app, html) => translateDamageTypeSelector(html?.[0] ?? html));
+Hooks.on("renderActorResistanceSelector", (app, html) => enhanceResistanceSelector(app, html?.[0] ?? html));
 Hooks.on("renderTokenConfig", (_app, html) => translateRenderedHtml(html?.[0] ?? html));
 Hooks.on("createItem", (item, options, userId) => {
   rememberNewlyCreatedItem(item, userId);
