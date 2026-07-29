@@ -333,3 +333,32 @@
   max-width: 100%;
   margin-inline: 3px;
 }
+
+.pf1e-ru-rules-journal :is(.journal-entry-content, .journal-page-content, .editor-content) table > thead,
+.pf1e-ru-rules-journal :is(.journal-entry-content, .journal-page-content, .editor-content) table:not(:has(> thead)) > tbody > tr:first-child {
+  background: rgba(0, 0, 0, 0.5) !important;
+  color: var(--color-text-light-highlight, #f0f0e0) !important;
+}
+
+.pf1e-ru-rules-journal :is(.journal-entry-content, .journal-page-content, .editor-content) table > thead > tr:first-child {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+.pf1e-ru-rules-journal :is(.journal-entry-content, .journal-page-content, .editor-content) table > thead > tr:first-child > :is(th, td),
+.pf1e-ru-rules-journal :is(.journal-entry-content, .journal-page-content, .editor-content) table:not(:has(> thead)) > tbody > tr:first-child > :is(th, td) {
+  background: transparent !important;
+  color: inherit !important;
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.pf1e-ru-rules-journal :is(.journal-entry-content, .journal-page-content, .editor-content) table > thead > tr:first-child > :is(th, td) *,
+.pf1e-ru-rules-journal :is(.journal-entry-content, .journal-page-content, .editor-content) table:not(:has(> thead)) > tbody > tr:first-child > :is(th, td) * {
+  color: inherit !important;
+}
+
+.pf1e-ru-rules-journal :is(.journal-entry-content, .journal-page-content, .editor-content) table :is(th, td):not(:last-child) {
+  border-right: 1px solid #000 !important;
+}

@@ -49,7 +49,7 @@ function createAthleticsSkillData() {
     mod: 0,
     rt: false,
     cs: false,
-    acp: false,
+    acp: true,
     background: false,
     custom: true
   };
@@ -63,17 +63,25 @@ function isActiveGM() {
 
 function actorNeedsAthletics(actor) {
   if (!actor || !ATHLETICS_ACTOR_TYPES.has(actor.type)) return false;
-  return !Object.prototype.hasOwnProperty.call(actor.system?.skills ?? {}, ATHLETICS_SKILL_ID);
+  const skill = actor.system?.skills?.[ATHLETICS_SKILL_ID];
+  return !skill || skill.acp !== true;
+}
+
+function athleticsUpdateForActor(actor) {
+  const skill = actor.system?.skills?.[ATHLETICS_SKILL_ID];
+  return skill
+    ? { [`system.skills.${ATHLETICS_SKILL_ID}.acp`]: true }
+    : { [`system.skills.${ATHLETICS_SKILL_ID}`]: createAthleticsSkillData() };
 }
 
 async function addAthleticsToActor(actor) {
   if (!actorNeedsAthletics(actor)) return false;
-  await actor.update({ [`system.skills.${ATHLETICS_SKILL_ID}`]: createAthleticsSkillData() });
+  await actor.update(athleticsUpdateForActor(actor));
   return true;
 }
 
 function reportAthleticsError(error) {
-  console.error(`${MODULE_ID} | Не удалось добавить навык «Атлетика».`, error);
+  console.error(`${MODULE_ID} | Не удалось добавить или обновить навык «Атлетика».`, error);
   ui.notifications?.error(game.i18n.localize("PF1ERU.Settings.Athletics.Error"));
 }
 
@@ -84,7 +92,7 @@ async function addAthleticsToExistingActors({ notify = false } = {}) {
     .filter(actorNeedsAthletics)
     .map((actor) => ({
       _id: actor.id,
-      [`system.skills.${ATHLETICS_SKILL_ID}`]: createAthleticsSkillData()
+      ...athleticsUpdateForActor(actor)
     }));
 
   if (updates.length) await Actor.updateDocuments(updates);
@@ -94,6 +102,20 @@ async function addAthleticsToExistingActors({ notify = false } = {}) {
       : "PF1ERU.Settings.Athletics.AlreadyAdded";
     ui.notifications?.info(game.i18n.format(key, { count: updates.length }));
   }
+  return updates.length;
+}
+
+async function updateExistingAthleticsArmorPenalty() {
+  if (!isActiveGM()) return 0;
+  const updates = game.actors
+    .filter((actor) => ATHLETICS_ACTOR_TYPES.has(actor.type)
+      && actor.system?.skills?.[ATHLETICS_SKILL_ID]
+      && actor.system.skills[ATHLETICS_SKILL_ID].acp !== true)
+    .map((actor) => ({
+      _id: actor.id,
+      [`system.skills.${ATHLETICS_SKILL_ID}.acp`]: true
+    }));
+  if (updates.length) await Actor.updateDocuments(updates);
   return updates.length;
 }
 
@@ -1106,6 +1128,14 @@ function translateDamageTypeSelector(root) {
   }
 }
 
+function translateDamageTraitSelector(app, root) {
+  if (!isRussian() || app?.options?.subject !== "damageTypes") return;
+  replaceExactRenderedText(root, {
+    Untyped: "Без типа",
+    Precision: "Точный"
+  });
+}
+
 function registerDamageReductionBypassTypes(registry) {
   for (const [id, name] of DAMAGE_REDUCTION_BYPASS_TYPES) {
     if (registry.has(id)) continue;
@@ -1313,6 +1343,32 @@ function installActorSheetTranslationObserver(app, root) {
   app.__pf1eRuTranslationObserver = { root, observer };
 }
 
+async function openRussianJournalReference(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  const document = await fromUuid(event.currentTarget.dataset.compendiumEntry);
+  if (!document) return;
+  if (document.documentName === "JournalEntryPage") {
+    document.parent?.sheet?.render(true, { pageId: document.id });
+  } else {
+    document.sheet?.render(true);
+  }
+}
+
+function createSkillReferenceAnchor(skillName) {
+  const heading = skillName.querySelector("h4");
+  if (!heading) return null;
+  const icon = skillName.querySelector("i.compendium-icon") ?? document.createElement("i");
+  icon.classList.add("fas", "fa-book", "compendium-icon");
+
+  const anchor = document.createElement("a");
+  anchor.classList.add("compendium-entry", "pf1e-ru-generated-reference");
+  anchor.append(icon, heading);
+  skillName.append(anchor);
+  anchor.addEventListener("click", openRussianJournalReference);
+  return anchor;
+}
+
 function redirectReferenceBooks(root) {
   if (!isRussian() || !(root instanceof HTMLElement)) return;
 
@@ -1331,10 +1387,11 @@ function redirectReferenceBooks(root) {
   }
 
   for (const skillName of root.querySelectorAll(".skill-name")) {
-    const anchor = skillName.querySelector("a.compendium-entry");
     const label = skillName.querySelector("h4")?.textContent;
     const uuid = journalReferences.skills.get(normalizeLabel(label));
-    if (!anchor || !uuid) continue;
+    if (!uuid) continue;
+    const anchor = skillName.querySelector("a.compendium-entry") ?? createSkillReferenceAnchor(skillName);
+    if (!anchor) continue;
     anchor.dataset.compendiumEntry = uuid;
     anchor.dataset.documentType = "JournalEntryPage";
     anchor.title = "Открыть русское описание навыка";
@@ -1346,6 +1403,15 @@ function enableSensesScrolling(root) {
   for (const value of root.querySelectorAll("li.attribute.senses > .attribute-value")) {
     value.classList.add("scroll", "high");
   }
+}
+
+function markRussianRulesJournal(app, html) {
+  const document = app?.document ?? app?.object;
+  const packId = document?.pack ?? document?.parent?.pack;
+  if (packId !== RULES_PACK_ID) return;
+  const root = html?.[0] ?? html;
+  const windowElement = app?.element?.[0] ?? root?.closest?.(".window-app");
+  windowElement?.classList?.add("pf1e-ru-rules-journal");
 }
 
 function markActorSheetUserContent(app, root) {
@@ -1403,6 +1469,8 @@ Hooks.once("ready", async () => {
 
   if (game.settings.get(MODULE_ID, ATHLETICS_SETTING)) {
     await addAthleticsToExistingActors().catch(reportAthleticsError);
+  } else {
+    await updateExistingAthleticsArmorPenalty().catch(reportAthleticsError);
   }
 
   for (const application of Object.values(ui.windows)) {
@@ -1452,8 +1520,11 @@ Hooks.on("renderDialog", (app, html) => {
 });
 Hooks.on("renderSensesSelector", (_app, html) => translateRenderedHtml(html?.[0] ?? html));
 Hooks.on("renderDamageTypeSelector", (_app, html) => translateDamageTypeSelector(html?.[0] ?? html));
+Hooks.on("renderActorTraitSelector", (app, html) => translateDamageTraitSelector(app, html?.[0] ?? html));
 Hooks.on("renderActorResistanceSelector", (app, html) => enhanceResistanceSelector(app, html?.[0] ?? html));
 Hooks.on("renderTokenConfig", (_app, html) => translateRenderedHtml(html?.[0] ?? html));
+Hooks.on("renderJournalSheet", markRussianRulesJournal);
+Hooks.on("renderJournalPageSheet", markRussianRulesJournal);
 Hooks.on("createItem", (item, options, userId) => {
   rememberNewlyCreatedItem(item, userId);
   void handleCreatedConsumable(item, options, userId);
