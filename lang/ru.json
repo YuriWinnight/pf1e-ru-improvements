@@ -42,6 +42,10 @@
     "Level7": "7 круг",
     "Level8": "8 круг",
     "Level9": "9 круг",
+    "Skill": {
+      "AlwaysShow": "ВП",
+      "AlwaysShowTooltip": "Всегда показывать на вкладке «Сводка»"
+    },
     "Config": {
       "Reset": "Сбросить настройки листа"
     }
@@ -115,6 +119,17 @@
     "DescriptorPlural": "Дескрипторы",
     "SpellComponentThought": "Мысленный",
     "SpellComponentEmotion": "Эмоциональный",
+    "SpellComponentKeys": {
+      "Verbal": "С",
+      "Somatic": "Ж",
+      "Thought": "М",
+      "Emotion": "Э",
+      "Material": "Р",
+      "Focus": "Ф",
+      "DivineFocus": "СФ"
+    },
+    "Preparation": "Подготовка",
+    "Offsets": "Смещения",
     "CastsPerDayUsedFormula": "Формула подсчёта заклинаний в день",
     "DCOffsetFormula": "Формула смещения СЛ",
     "ChargeCostFormula": "Формула использования зарядов",
@@ -356,6 +371,15 @@
   "PF1.DescriptorPlural": "Дескрипторы",
   "PF1.SpellComponentThought": "Мысленный",
   "PF1.SpellComponentEmotion": "Эмоциональный",
+  "PF1.SpellComponentKeys.Verbal": "С",
+  "PF1.SpellComponentKeys.Somatic": "Ж",
+  "PF1.SpellComponentKeys.Thought": "М",
+  "PF1.SpellComponentKeys.Emotion": "Э",
+  "PF1.SpellComponentKeys.Material": "Р",
+  "PF1.SpellComponentKeys.Focus": "Ф",
+  "PF1.SpellComponentKeys.DivineFocus": "СФ",
+  "PF1.Preparation": "Подготовка",
+  "PF1.Offsets": "Смещения",
   "PF1.CastsPerDayUsedFormula": "Формула подсчёта заклинаний в день",
   "PF1.DCOffsetFormula": "Формула смещения СЛ",
   "PF1.ChargeCostFormula": "Формула использования зарядов",

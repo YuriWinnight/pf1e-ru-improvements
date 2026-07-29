@@ -245,6 +245,8 @@ const RU_OVERRIDES = {
   "PF1AS.Level7": "7 круг",
   "PF1AS.Level8": "8 круг",
   "PF1AS.Level9": "9 круг",
+  "PF1AS.Skill.AlwaysShow": "ВП",
+  "PF1AS.Skill.AlwaysShowTooltip": "Всегда показывать на вкладке «Сводка»",
   "PF1AS.Config.Reset": "Сбросить настройки листа",
   "TOKEN.VisionLowLightMultiplier": "Множитель сумеречного зрения",
   "PF1.ACNormal": "КБ",
@@ -309,6 +311,15 @@ const RU_OVERRIDES = {
   "PF1.DescriptorPlural": "Дескрипторы",
   "PF1.SpellComponentThought": "Мысленный",
   "PF1.SpellComponentEmotion": "Эмоциональный",
+  "PF1.SpellComponentKeys.Verbal": "С",
+  "PF1.SpellComponentKeys.Somatic": "Ж",
+  "PF1.SpellComponentKeys.Thought": "М",
+  "PF1.SpellComponentKeys.Emotion": "Э",
+  "PF1.SpellComponentKeys.Material": "Р",
+  "PF1.SpellComponentKeys.Focus": "Ф",
+  "PF1.SpellComponentKeys.DivineFocus": "СФ",
+  "PF1.Preparation": "Подготовка",
+  "PF1.Offsets": "Смещения",
   "PF1.CastsPerDayUsedFormula": "Формула подсчёта заклинаний в день",
   "PF1.DCOffsetFormula": "Формула смещения СЛ",
   "PF1.ChargeCostFormula": "Формула использования зарядов",
@@ -568,6 +579,29 @@ function applyRussianTranslations() {
   if (!isRussian()) return;
   for (const [path, value] of Object.entries(RU_OVERRIDES)) setTranslation(path, value);
   refreshLocalizedPf1Config();
+}
+
+function installSpellComponentAbbreviations() {
+  const prototype = CONFIG.Item.documentClasses?.spell?.prototype;
+  const originalGetLabels = prototype?.getLabels;
+  if (!prototype || typeof originalGetLabels !== "function" || originalGetLabels.__pf1eRuComponents) return;
+
+  const localizedGetLabels = function (...args) {
+    const labels = originalGetLabels.apply(this, args);
+    labels.components = this.getSpellComponents()
+      .map((component) => {
+        const value = String(component ?? "");
+        return value.startsWith(RU_OVERRIDES["PF1.SpellComponentKeys.DivineFocus"])
+          ? RU_OVERRIDES["PF1.SpellComponentKeys.DivineFocus"]
+          : value[0] ?? "";
+      })
+      .filter(Boolean)
+      .join(" ");
+    return labels;
+  };
+
+  localizedGetLabels.__pf1eRuComponents = true;
+  prototype.getLabels = localizedGetLabels;
 }
 
 function refreshLocalizedPf1Config() {
@@ -1459,11 +1493,13 @@ Hooks.once("init", () => {
   registerAthleticsSetting();
   installModuleStyles();
   applyRussianTranslations();
+  installSpellComponentAbbreviations();
   installPluralFormatting();
 });
 
 Hooks.once("ready", async () => {
   applyRussianTranslations();
+  installSpellComponentAbbreviations();
   await collectCompendiumReferences();
   processRenderedChatMessages();
 
