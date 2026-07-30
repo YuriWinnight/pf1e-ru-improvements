@@ -1114,6 +1114,49 @@ function translateRenderedHtml(root) {
   }
 }
 
+function translateActorSheetFixedFields(root) {
+  if (!isRussian() || !(root instanceof HTMLElement)) return;
+
+  const selectors = [
+    ".item-detail.item-range > label",
+    ".item-detail.item-range > .tooltipcontent",
+    ".spellbook-group .item .spell-uses",
+    '.item-control[data-tooltip="PF1.GiveItem"]',
+    '.item-control[data-tooltip="Give Item"]',
+    '.item-control[data-tooltip="Give item to actor"]'
+  ].join(", ");
+
+  const elements = [...root.querySelectorAll(selectors)];
+  if (root.matches(selectors)) elements.unshift(root);
+
+  for (const element of elements) {
+    if (element.matches(".item-detail.item-range > label, .item-detail.item-range > .tooltipcontent")) {
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        const translated = translateText(node.nodeValue);
+        if (translated !== node.nodeValue) node.nodeValue = translated;
+      }
+    }
+
+    if (element.matches(".spellbook-group .item .spell-uses")) {
+      const value = String(element.textContent ?? "").trim().toLocaleLowerCase("ru-RU");
+      if (value === "неограниченно" || value === "at will") {
+        element.innerHTML = '<svg class="pf1e-ru-infinity-icon" viewBox="0 0 64 32" aria-hidden="true"><path d="M4 16 C4 6 14 3 22 8 C26 10 29 14 32 16 C35 18 38 22 42 24 C50 29 60 26 60 16 C60 6 50 3 42 8 C38 10 35 14 32 16 C29 18 26 22 22 24 C14 29 4 26 4 16 Z"/></svg>';
+        element.classList.add("pf1e-ru-at-will");
+        element.setAttribute("aria-label", "Неограниченно");
+        element.setAttribute("data-tooltip", "Неограниченно");
+        element.setAttribute("title", "Неограниченно");
+      }
+    }
+
+    if (element.matches(".item-control")) {
+      element.setAttribute("data-tooltip", RU_OVERRIDES["PF1.GiveItem"]);
+      element.setAttribute("title", RU_OVERRIDES["PF1.GiveItem"]);
+    }
+  }
+}
+
 function replaceExactRenderedText(root, replacements) {
   if (!(root instanceof HTMLElement)) return;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -1367,9 +1410,11 @@ function installActorSheetTranslationObserver(app, root) {
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
-        if (!(node instanceof HTMLElement)) continue;
-        markActorSheetUserContent(app, node);
-        translateRenderedHtml(node);
+        const element = node instanceof HTMLElement ? node : node.parentElement;
+        if (!(element instanceof HTMLElement)) continue;
+        markActorSheetUserContent(app, element);
+        translateActorSheetFixedFields(element);
+        translateRenderedHtml(element);
       }
     }
   });
@@ -1480,6 +1525,7 @@ function markActorSheetUserContent(app, root) {
 function processActorSheet(app, html) {
   const root = html?.[0] ?? html;
   markActorSheetUserContent(app, root);
+  translateActorSheetFixedFields(root);
   translateRenderedHtml(root);
   installActorSheetTranslationObserver(app, root);
   redirectReferenceBooks(root);

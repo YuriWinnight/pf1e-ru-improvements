@@ -48,6 +48,81 @@
   align-items: stretch !important;
 }
 
+/* Keep the longer Russian list values inside their own columns. */
+.pf1alt.sheet.actor .item-list > .inventory-header,
+.pf1e-pg-alt-sheet.sheet.actor .item-list > .inventory-header {
+  box-sizing: border-box;
+  padding-right: 3px !important;
+}
+
+.pf1alt.sheet.actor .buffs-body .item-detail.item-duration,
+.pf1e-pg-alt-sheet.sheet.actor .buffs-body .item-detail.item-duration {
+  flex: 0 0 96px !important;
+}
+
+.pf1alt.sheet.actor .buffs-body .item-detail.item-level,
+.pf1e-pg-alt-sheet.sheet.actor .buffs-body .item-detail.item-level {
+  flex: 0 0 64px !important;
+}
+
+.pf1alt.sheet.actor .spellbook-group .item-detail.spell-activation,
+.pf1e-pg-alt-sheet.sheet.actor .spellbook-group .item-detail.spell-activation,
+.pf1alt.sheet.actor .feats-body .item-detail.item-usage,
+.pf1e-pg-alt-sheet.sheet.actor .feats-body .item-detail.item-usage {
+  box-sizing: border-box;
+  flex: 0 0 132px !important;
+  min-width: 132px;
+}
+
+.pf1alt.sheet.actor .spellbook-group .item-detail.spell-activation > span,
+.pf1e-pg-alt-sheet.sheet.actor .spellbook-group .item-detail.spell-activation > span,
+.pf1alt.sheet.actor .feats-body .item-detail.item-usage > span,
+.pf1e-pg-alt-sheet.sheet.actor .feats-body .item-detail.item-usage > span {
+  box-sizing: border-box;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  padding-inline: 3px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf1alt.sheet.actor .spellbook-group .spell-level-message,
+.pf1e-pg-alt-sheet.sheet.actor .spellbook-group .spell-level-message {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  margin: 0 !important;
+  padding: 2px 4px;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.pf1alt.sheet.actor .spellbook-group .item-detail.spell-uses.pf1e-ru-at-will,
+.pf1e-pg-alt-sheet.sheet.actor .spellbook-group .item-detail.spell-uses.pf1e-ru-at-will {
+  display: flex;
+  align-items: center;
+  justify-content: center !important;
+  padding: 0 !important;
+  line-height: 1;
+  text-align: center;
+}
+
+.pf1alt.sheet.actor .spellbook-group .item-detail.spell-uses.pf1e-ru-at-will > svg.pf1e-ru-infinity-icon,
+.pf1e-pg-alt-sheet.sheet.actor .spellbook-group .item-detail.spell-uses.pf1e-ru-at-will > svg.pf1e-ru-infinity-icon {
+  flex: 0 0 auto !important;
+  width: 26px;
+  height: 13px;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .pf1alt.sheet.actor .inventory-filters .filter-list,
 .pf1e-pg-alt-sheet.sheet.actor .inventory-filters .filter-list,
 .pf1alt .inventory-filters .filter-list,
