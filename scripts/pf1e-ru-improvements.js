@@ -1448,6 +1448,13 @@ function createSkillReferenceAnchor(skillName) {
   return anchor;
 }
 
+function removeGeneratedSkillReference(skillName) {
+  const anchor = skillName.querySelector("a.pf1e-ru-generated-reference");
+  if (!anchor) return;
+  anchor.querySelector("i.compendium-icon")?.remove();
+  anchor.replaceWith(...anchor.childNodes);
+}
+
 function redirectReferenceBooks(root) {
   if (!isRussian() || !(root instanceof HTMLElement)) return;
 
@@ -1466,6 +1473,14 @@ function redirectReferenceBooks(root) {
   }
 
   for (const skillName of root.querySelectorAll(".skill-name")) {
+    const isSummarySkill = Boolean(skillName.closest(
+      '.tab[data-tab="summary"], .tab[data-tab="details"], .details-skills-list'
+    ));
+    if (isSummarySkill) {
+      removeGeneratedSkillReference(skillName);
+      continue;
+    }
+
     const label = skillName.querySelector("h4")?.textContent;
     const uuid = journalReferences.skills.get(normalizeLabel(label));
     if (!uuid) continue;
