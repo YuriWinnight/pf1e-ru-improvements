@@ -1,3 +1,5 @@
-2026/07/28-18:37:18.585 5974 Recovering log #48
-2026/07/28-18:37:18.596 5974 Delete type=0 #48
-2026/07/28-18:37:18.596 5974 Delete type=3 #47
+2026/08/01-05:22:22.777 5dcc Recovering log #67
+2026/08/01-05:22:22.777 5dcc Level-0 table #69: started
+2026/08/01-05:22:22.782 5dcc Level-0 table #69: 6182 bytes OK
+2026/08/01-05:22:22.792 5dcc Delete type=0 #67
+2026/08/01-05:22:22.792 5dcc Delete type=3 #66

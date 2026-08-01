@@ -2,9 +2,106 @@ const MODULE_ID = "pf1e-ru-improvements";
 const RULES_PACK_ID = `${MODULE_ID}.rules`;
 const SKILLS_JOURNAL_ID = "RuSkillsJournal1";
 const CONDITIONS_JOURNAL_ID = "RuConditionsJrnl";
+const FEAR_JOURNAL_ID = "RuFearRulesJrnl1";
 const ATHLETICS_SETTING = "enableAthleticsSkill";
+const FEAR_RULES_SETTING = "enableHorrorRules";
+const FEAR_CONTEXT_NOTES_PATCH = `${MODULE_ID}.fearContextNotesPatched`;
 const ATHLETICS_SKILL_ID = "athletics";
 const ATHLETICS_ACTOR_TYPES = new Set(["character", "npc"]);
+const LEGACY_FEAR_CONDITION_IDS = ["shaken", "frightened", "panicked"];
+const HORRIFIED_CONDITION_ID = "pf1eRuFearHorrified";
+const HELPLESS_CONDITION_ID = "helpless";
+const HORRIFIED_HELPLESS_FLAG = "horrifiedHelplessManaged";
+const STANDARD_FEAR_CHANGES = [
+  { formula: -2, operator: "add", subTarget: "attack", modifier: "penalty", priority: 0 },
+  { formula: -2, operator: "add", subTarget: "allSavingThrows", modifier: "penalty", priority: 0 },
+  { formula: -2, operator: "add", subTarget: "skills", modifier: "penalty", priority: 0 },
+  { formula: -2, operator: "add", subTarget: "allChecks", modifier: "penalty", priority: 0 }
+];
+const FEAR_CONDITIONS = [
+  {
+    id: "pf1eRuFearSpooked",
+    name: "Настороженность",
+    englishName: "Spooked",
+    pageId: "RuFearSpooked001",
+    icon: `modules/${MODULE_ID}/assets/conditions/fear/spooked.svg`,
+    contextNote: "-[[2]] против эффектов Ужаса",
+    mechanics: {
+      changes: [
+        { formula: 1, operator: "add", subTarget: "init", modifier: "circumstance", priority: 0 },
+        { formula: -2, operator: "add", subTarget: "skill.per", modifier: "penalty", priority: 0 }
+      ]
+    }
+  },
+  {
+    id: "pf1eRuFearShaken",
+    name: "Потрясение",
+    englishName: "Shaken",
+    pageId: "RuFearShaken0001",
+    icon: `modules/${MODULE_ID}/assets/conditions/fear/shaken.svg`,
+    mechanics: { changes: STANDARD_FEAR_CHANGES }
+  },
+  {
+    id: "pf1eRuFearScared",
+    name: "Трепет",
+    englishName: "Scared",
+    pageId: "RuFearScared0001",
+    icon: `modules/${MODULE_ID}/assets/conditions/fear/scared.svg`,
+    contextNote: "-[[4]] (штраф) против эффектов Ужаса",
+    mechanics: { changes: STANDARD_FEAR_CHANGES }
+  },
+  {
+    id: "pf1eRuFearFrightened",
+    name: "Испуг",
+    englishName: "Frightened",
+    pageId: "RuFearFrightened",
+    icon: `modules/${MODULE_ID}/assets/conditions/fear/frightened.svg`,
+    contextNote: "-[[4]] (штраф) против эффектов Ужаса",
+    mechanics: { changes: STANDARD_FEAR_CHANGES }
+  },
+  {
+    id: "pf1eRuFearPanicked",
+    name: "Паника",
+    englishName: "Panicked",
+    pageId: "RuFearPanicked01",
+    icon: `modules/${MODULE_ID}/assets/conditions/fear/panicked.svg`,
+    contextNote: "-[[4]] (штраф) против эффектов Ужаса",
+    mechanics: { changes: STANDARD_FEAR_CHANGES }
+  },
+  {
+    id: "pf1eRuFearTerrified",
+    name: "Страх",
+    englishName: "Terrified",
+    pageId: "RuFearTerrified1",
+    icon: `modules/${MODULE_ID}/assets/conditions/fear/terrified.svg`,
+    contextNote: "-[[4]] (штраф) против эффектов Ужаса",
+    mechanics: { changes: STANDARD_FEAR_CHANGES }
+  },
+  {
+    id: "pf1eRuFearHorrified",
+    name: "Оцепенение от ужаса",
+    englishName: "Horrified",
+    pageId: "RuFearHorrified1",
+    icon: `modules/${MODULE_ID}/assets/conditions/fear/horrified.svg`,
+    contextNote: "-[[4]] (штраф) против эффектов Ужаса",
+    mechanics: {
+      changes: [
+        ...STANDARD_FEAR_CHANGES,
+        { formula: -2, operator: "add", subTarget: "ac", modifier: "penalty", priority: 0 },
+        {
+          formula: 0,
+          operator: "set",
+          subTarget: "dex",
+          modifier: "untypedPerm",
+          priority: 1001,
+          continuous: true
+        }
+      ],
+      flags: ["loseDexToAC"]
+    }
+  }
+];
+const FEAR_CONDITION_IDS = FEAR_CONDITIONS.map((condition) => condition.id);
 const DOM_TRANSLATION_EXCLUDED_SELECTOR = [
   "[contenteditable]",
   ".ProseMirror",
@@ -132,6 +229,320 @@ function registerAthleticsSetting() {
       void addAthleticsToExistingActors({ notify: true }).catch(reportAthleticsError);
     }
   });
+}
+
+function registerFearRulesSetting() {
+  game.settings.register(MODULE_ID, FEAR_RULES_SETTING, {
+    name: "PF1ERU.Settings.HorrorRules.Name",
+    hint: "PF1ERU.Settings.HorrorRules.Hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+    requiresReload: true,
+    onChange: (enabled) => {
+      if (!enabled || !game.ready) return;
+      installFearRulesConfiguration();
+      installFearContextNotes();
+      void Promise.all([
+        collectCompendiumReferences(),
+        removeActiveLegacyFearConditions(),
+        syncAllHorrifiedHelpless()
+      ]).then(() => {
+        refreshFearRuleInterfaces();
+      }).catch((error) => {
+        console.error(`${MODULE_ID} | Не удалось применить дополнительные правила ужаса.`, error);
+      });
+    }
+  });
+}
+
+function fearRulesEnabled() {
+  try {
+    return Boolean(game.settings.get(MODULE_ID, FEAR_RULES_SETTING));
+  } catch (_error) {
+    return false;
+  }
+}
+
+function installFoundry11CompatibilityShims() {
+  const jqueryPrototype = globalThis.jQuery?.fn ?? globalThis.$?.fn;
+  if (jqueryPrototype && typeof jqueryPrototype.querySelector !== "function") {
+    Object.defineProperty(jqueryPrototype, "querySelector", {
+      configurable: true,
+      enumerable: false,
+      value(selector) {
+        return this[0]?.querySelector?.(selector) ?? null;
+      }
+    });
+  }
+
+  const activeEffectPrototype = globalThis.CONFIG?.ActiveEffect?.documentClass?.prototype;
+  if (!activeEffectPrototype) return;
+
+  const compatibilityMarker = MODULE_ID + "Patched";
+  const labelDescriptor = Object.getOwnPropertyDescriptor(activeEffectPrototype, "label");
+  if (labelDescriptor?.get?.[compatibilityMarker]) return;
+  if (labelDescriptor && labelDescriptor.configurable === false) return;
+
+  const getLabel = function () {
+    return this.name;
+  };
+  Object.defineProperty(getLabel, compatibilityMarker, {
+    configurable: false,
+    enumerable: false,
+    value: true
+  });
+  Object.defineProperty(activeEffectPrototype, "label", {
+    configurable: true,
+    enumerable: labelDescriptor?.enumerable ?? false,
+    get: getLabel
+  });
+}
+
+function migrateHealthEstimateActiveEffectRules() {
+  if (!game.modules.get("healthEstimate")?.active) return;
+
+  let estimations;
+  try {
+    estimations = game.settings.get("healthEstimate", "core.estimations");
+  } catch (_error) {
+    return;
+  }
+  if (!Array.isArray(estimations)) return;
+
+  let changed = false;
+  const updated = estimations.map((estimation) => {
+    const rule = estimation?.rule;
+    if (typeof rule !== "string" || !rule.includes("actor.effects") || !rule.includes(".label")) {
+      return estimation;
+    }
+    changed = true;
+    return {
+      ...estimation,
+      rule: rule.replace(/\.label\b/g, ".name")
+    };
+  });
+  if (!changed) return;
+
+  if (game.healthEstimate) game.healthEstimate.estimations = updated;
+  if (game.user?.isGM) {
+    void game.settings.set("healthEstimate", "core.estimations", updated).catch((error) => {
+      console.warn(MODULE_ID + " | Не удалось сохранить совместимую формулу Health Estimate.", error);
+    });
+  }
+}
+
+function actorHasFearCondition(actor, conditionId) {
+  const storedCondition = actor?.system?.attributes?.conditions?.[conditionId];
+  if (storedCondition === true || storedCondition === 1 || storedCondition === "true") return true;
+
+  const statusCollections = [
+    actor?.statuses,
+    actor?.token?.statuses,
+    actor?.token?.document?.statuses,
+    actor?.prototypeToken?.statuses
+  ];
+  if (statusCollections.some((statuses) =>
+    statuses?.has?.(conditionId) || Array.from(statuses ?? []).includes(conditionId)
+  )) return true;
+
+  return Array.from(actor?.effects ?? []).some((effect) => {
+    if (effect?.disabled || effect?.suppressed) return false;
+    const statuses = effect?.statuses;
+    return statuses?.has?.(conditionId) || Array.from(statuses ?? []).includes(conditionId);
+  });
+}
+
+function getActiveFearContextCondition(actor) {
+  let activeCondition = null;
+  for (const condition of FEAR_CONDITIONS) {
+    if (condition.contextNote && actorHasFearCondition(actor, condition.id)) activeCondition = condition;
+  }
+  return activeCondition;
+}
+
+function getActiveFearContextEntry(actor) {
+  const condition = getActiveFearContextCondition(actor);
+  if (condition) return { contextNote: condition.contextNote, item: null };
+
+  for (const item of Array.from(actor?.items ?? [])) {
+    if (!item?.isActive) continue;
+    const contextNote = Array.from(item.system?.contextNotes ?? []).find((note) => {
+      const target = String(note?.subTarget ?? "");
+      return /против эффектов Ужаса/i.test(note?.text ?? "")
+        && ["will", "savingThrow.will", "allSavingThrows"].includes(target);
+    });
+    if (contextNote) return { contextNote: contextNote.text, item };
+  }
+  return null;
+}
+
+function fearJournalPageUuid(pageId) {
+  return `Compendium.${RULES_PACK_ID}.JournalEntry.${FEAR_JOURNAL_ID}.JournalEntryPage.${pageId}`;
+}
+
+function installFearRulesConfiguration() {
+  if (!fearRulesEnabled()) return;
+  const config = globalThis.pf1?.config;
+  if (!config?.conditions || !config?.conditionTextures || !config?.conditionMechanics) {
+    console.error(`${MODULE_ID} | Не удалось установить дополнительные правила ужаса: конфигурация PF1 недоступна.`);
+    return;
+  }
+
+  config.conditionCompendiumEntries ??= {};
+  for (const legacyId of LEGACY_FEAR_CONDITION_IDS) {
+    delete config.conditions[legacyId];
+    delete config.conditionTextures[legacyId];
+    delete config.conditionMechanics[legacyId];
+    delete config.conditionCompendiumEntries[legacyId];
+  }
+
+  for (const condition of FEAR_CONDITIONS) {
+    config.conditions[condition.id] = condition.name;
+    config.conditionTextures[condition.id] = condition.icon;
+    config.conditionMechanics[condition.id] = condition.mechanics;
+    config.conditionCompendiumEntries[condition.id] = fearJournalPageUuid(condition.pageId);
+  }
+  config.conditionTracks.fear = [...FEAR_CONDITION_IDS];
+
+  const removedIds = new Set([...LEGACY_FEAR_CONDITION_IDS, ...FEAR_CONDITION_IDS]);
+  CONFIG.statusEffects = (CONFIG.statusEffects ?? []).filter((effect) => {
+    const id = typeof effect === "string" ? null : effect?.id;
+    return !removedIds.has(id);
+  });
+  CONFIG.statusEffects.push(...FEAR_CONDITIONS.map((condition) => ({
+    id: condition.id,
+    label: condition.name,
+    name: condition.name,
+    icon: condition.icon
+  })));
+}
+
+function refreshFearRuleInterfaces() {
+  for (const application of Object.values(ui.windows ?? {})) {
+    const document = application?.document ?? application?.object;
+    if (document instanceof Actor) application.render(false);
+  }
+  if (canvas?.tokens?.hud?.rendered) canvas.tokens.hud.render();
+}
+
+function installFearContextNotes() {
+  const actorPrototype = CONFIG.Actor?.documentClass?.prototype;
+  const originalGetContextNotes = actorPrototype?.getContextNotes;
+  if (typeof originalGetContextNotes !== "function" || actorPrototype[FEAR_CONTEXT_NOTES_PATCH]) return;
+
+  Object.defineProperty(actorPrototype, FEAR_CONTEXT_NOTES_PATCH, {
+    value: true,
+    configurable: false,
+    enumerable: false,
+    writable: false
+  });
+
+  actorPrototype.getContextNotes = function pf1eRuFearContextNotes(context) {
+    const result = originalGetContextNotes.call(this, context) ?? [];
+    if (!fearRulesEnabled()) return result;
+
+    const contextKey = context?.string ?? context;
+    if (contextKey !== "savingThrow.will") return result;
+
+    const activeFearContext = getActiveFearContextEntry(this);
+    if (!activeFearContext) return result;
+
+    const alreadyIncluded = result.some((entry) =>
+      entry?.notes?.some?.((note) => note === activeFearContext.contextNote)
+    );
+    if (!alreadyIncluded) result.push({
+      notes: [activeFearContext.contextNote],
+      item: activeFearContext.item
+    });
+    return result;
+  };
+}
+
+function appendFearNoteToWillRoll(actor, rollOptions, savingThrowId) {
+  if (!fearRulesEnabled() || savingThrowId !== "will") return;
+  const activeFearContext = getActiveFearContextEntry(actor);
+  if (!activeFearContext) return;
+
+  rollOptions.chatTemplateData ??= {};
+  const properties = rollOptions.chatTemplateData.properties ??= [];
+  const existingFearProperty = properties.find((property) =>
+    Array.from(property?.value ?? []).some((value) => String(value).includes("против эффектов Ужаса"))
+  );
+  if (existingFearProperty) {
+    existingFearProperty.header = "Заметки";
+    rollOptions.chatTemplateData.hasProperties = true;
+    return;
+  }
+
+  const formattedNote = actor.formatContextNotes?.(
+    [{ notes: [activeFearContext.contextNote], item: activeFearContext.item }],
+    rollOptions.rollData
+  )?.[0] ?? activeFearContext.contextNote;
+  properties.push({
+    header: "Заметки",
+    value: [formattedNote],
+    css: "pf1e-ru-fear-context-note"
+  });
+  rollOptions.chatTemplateData.hasProperties = true;
+}
+
+async function removeActiveLegacyFearConditions() {
+  if (!fearRulesEnabled() || !isActiveGM()) return;
+
+  for (const actor of game.actors) {
+    const activeLegacyIds = LEGACY_FEAR_CONDITION_IDS.filter(
+      (conditionId) => actor.system?.attributes?.conditions?.[conditionId] === true
+    );
+    const legacyEffects = actor.effects.filter((effect) =>
+      LEGACY_FEAR_CONDITION_IDS.some((conditionId) => effect.statuses?.has?.(conditionId))
+    );
+    if (!activeLegacyIds.length && !legacyEffects.length) continue;
+
+    if (activeLegacyIds.length) {
+      const update = Object.fromEntries(activeLegacyIds.map((conditionId) => [
+        `system.attributes.conditions.-=${conditionId}`,
+        null
+      ]));
+      await actor.update(update);
+    }
+    if (legacyEffects.length) {
+      await actor.deleteEmbeddedDocuments("ActiveEffect", legacyEffects.map((effect) => effect.id));
+    }
+  }
+}
+
+async function syncHorrifiedHelpless(actor, horrifiedActive = null) {
+  if (!actor || !isActiveGM()) return;
+  const active = horrifiedActive ?? (
+    fearRulesEnabled() && actorHasFearCondition(actor, HORRIFIED_CONDITION_ID)
+  );
+  const managed = actor.getFlag?.(MODULE_ID, HORRIFIED_HELPLESS_FLAG) === true;
+  const helpless = actorHasFearCondition(actor, HELPLESS_CONDITION_ID);
+
+  if (active) {
+    if (helpless) return;
+    await actor.update({
+      [`system.attributes.conditions.${HELPLESS_CONDITION_ID}`]: true,
+      [`flags.${MODULE_ID}.${HORRIFIED_HELPLESS_FLAG}`]: true
+    });
+    return;
+  }
+
+  if (!managed) return;
+  const update = {
+    [`flags.${MODULE_ID}.-=${HORRIFIED_HELPLESS_FLAG}`]: null
+  };
+  if (helpless) update[`system.attributes.conditions.${HELPLESS_CONDITION_ID}`] = false;
+  await actor.update(update);
+}
+
+async function syncAllHorrifiedHelpless() {
+  if (!isActiveGM()) return;
+  for (const actor of game.actors) {
+    await syncHorrifiedHelpless(actor);
+  }
 }
 
 function numberedIconOptions(folder, prefix, numbers, label) {
@@ -728,6 +1139,44 @@ function normalizeReference(value) {
     .toLocaleLowerCase("ru");
 }
 
+async function ensureFearRulesWorldJournal() {
+  if (!fearRulesEnabled()) return null;
+  const existing = game.journal.find((journal) =>
+    journal.getFlag(MODULE_ID, "kind") === "fear-rules-fallback"
+  );
+  if (existing || !isActiveGM()) return existing ?? null;
+
+  const response = await fetch(`modules/${MODULE_ID}/data/fear-rules.json`);
+  if (!response.ok) throw new Error(`Не удалось загрузить данные журнала ужаса: HTTP ${response.status}`);
+  const data = await response.json();
+  return JournalEntry.create({
+    name: data.journalName,
+    pages: data.pages.map((page, index) => ({
+      name: page.name,
+      type: "text",
+      title: { show: true, level: 1 },
+      text: { format: 1, content: page.content, markdown: "" },
+      sort: (index + 1) * 100000,
+      ownership: { default: -1 },
+      flags: {
+        [MODULE_ID]: {
+          source: "Эффекты ужаса (Перевод под Пыво)",
+          kind: "fear-condition",
+          englishName: page.englishName,
+          conditionId: page.conditionId
+        }
+      }
+    })),
+    ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER },
+    flags: {
+      [MODULE_ID]: {
+        source: "Эффекты ужаса (Перевод под Пыво)",
+        kind: "fear-rules-fallback"
+      }
+    }
+  }, { renderSheet: false });
+}
+
 async function collectCompendiumReferences() {
   journalReferences.conditions.clear();
   journalReferences.skills.clear();
@@ -738,10 +1187,14 @@ async function collectCompendiumReferences() {
     return;
   }
 
-  const [skillsJournal, conditionsJournal] = await Promise.all([
+  let [skillsJournal, conditionsJournal, fearJournal] = await Promise.all([
     pack.getDocument(SKILLS_JOURNAL_ID),
-    pack.getDocument(CONDITIONS_JOURNAL_ID)
+    pack.getDocument(CONDITIONS_JOURNAL_ID),
+    fearRulesEnabled() ? pack.getDocument(FEAR_JOURNAL_ID) : Promise.resolve(null)
   ]);
+  if (fearRulesEnabled() && !fearJournal) {
+    fearJournal = await ensureFearRulesWorldJournal();
+  }
 
   for (const page of skillsJournal?.pages ?? []) {
     journalReferences.skills.set(normalizeLabel(page.name), page.uuid);
@@ -750,6 +1203,14 @@ async function collectCompendiumReferences() {
   for (const page of conditionsJournal?.pages ?? []) {
     const englishName = page.getFlag(MODULE_ID, "englishName");
     if (englishName) journalReferences.conditions.set(normalizeReference(englishName), page.uuid);
+    journalReferences.conditions.set(normalizeReference(page.name), page.uuid);
+  }
+
+  for (const page of fearJournal?.pages ?? []) {
+    const englishName = page.getFlag(MODULE_ID, "englishName");
+    const conditionId = page.getFlag(MODULE_ID, "conditionId");
+    if (englishName) journalReferences.conditions.set(normalizeReference(englishName), page.uuid);
+    if (conditionId) journalReferences.conditions.set(normalizeReference(conditionId), page.uuid);
     journalReferences.conditions.set(normalizeReference(page.name), page.uuid);
   }
 
@@ -910,10 +1371,92 @@ function translateActorRollFlavor(root) {
   if (translated !== value) flavor.textContent = translated;
 }
 
+function translateChatMetadata(root) {
+  if (!isRussian() || !(root instanceof HTMLElement)) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let node;
+  while ((node = walker.nextNode())) {
+    const value = node.nodeValue ?? "";
+    let translated = value
+      .replace(/\bSpell Resistance\b/gi, "Устойчивость к магии")
+      .replace(/\bSpell Res\.?/gi, "Устойчивость к магии")
+      .replace(/УкМ(?=\s*\d)/g, "Устойчивость к магии")
+      .replace(/\bDC(?=\s*\d)/gi, "СЛ");
+    if (/\bRange:/i.test(translated)) {
+      translated = translated
+        .replace(/\bRange:/gi, "Дистанция:")
+        .replace(/(\d+(?:[.,]\d+)?)\s*ft\b\.?/gi, "$1 фт.");
+    }
+    if (/\bRound\s+\d+\b/i.test(translated)) {
+      translated = translated.replace(/\bRound\s+(\d+)\b/gi, "Раунд $1");
+    }
+    if (translated !== value) node.nodeValue = translated;
+  }
+}
+
 function processChatMessage(message, html) {
   const root = html?.[0] ?? html;
   translateActorRollFlavor(root);
+  translateChatMetadata(root);
+  for (const label of root?.querySelectorAll?.(".property-group > label") ?? []) {
+    if (label.textContent?.trim() === "Ситуативные прим.") label.textContent = "Заметки";
+  }
   redirectChatSkillReference(message, root);
+  renderFearContextNoteInRollTooltip(message, root);
+}
+
+function renderFearContextNoteInRollTooltip(message, root) {
+  if (!fearRulesEnabled() || !(root instanceof HTMLElement)) return;
+  const subject = message?.flags?.pf1?.subject ?? message?.flags?.pf1?.metadata?.subject;
+  const flavor = message?.flavor ?? root.querySelector(".flavor-text")?.textContent ?? "";
+  if (subject?.save !== "will" && !/Испытание\s+Воли/i.test(flavor)) return;
+
+  const actor = message?.constructor?.getSpeakerActor?.(message.speaker)
+    ?? globalThis.ChatMessage?.getSpeakerActor?.(message.speaker)
+    ?? game.actors?.get?.(message?.speaker?.actor);
+  const activeFearContext = getActiveFearContextEntry(actor);
+  if (!activeFearContext) return;
+
+  const tooltip = root.querySelector(".dice-tooltip");
+  if (!tooltip || tooltip.querySelector(":scope > .pf1e-ru-fear-tooltip-note")) return;
+  const noteText = activeFearContext.contextNote
+    .replace(/-\[\[(\d+)\]\]/, "−$1")
+    .replace(/\s*\(штраф\)\s*/i, " ")
+    .trim();
+  const note = document.createElement("div");
+  note.className = "pf1e-ru-fear-tooltip-note";
+  note.innerHTML = `<strong>Заметки:</strong><span>${noteText}</span>`;
+  tooltip.append(note);
+}
+
+function renderFearContextNoteInWillSheetTooltip(app, root) {
+  if (!(root instanceof HTMLElement)) return;
+  const actor = app?.actor
+    ?? (app?.object?.documentName === "Actor" ? app.object : null)
+    ?? (app?.document?.documentName === "Actor" ? app.document : null);
+  const activeFearContext = fearRulesEnabled() ? getActiveFearContextEntry(actor) : null;
+
+  for (const tooltip of root.querySelectorAll(
+    '.saving-throw[data-savingthrow="will"] > .tooltipcontent'
+  )) {
+    tooltip.querySelectorAll(".pf1e-ru-fear-will-note").forEach((element) => element.remove());
+    if (!activeFearContext) continue;
+    const alreadyRendered = Array.from(tooltip.querySelectorAll(".tooltipcontent-context"))
+      .some((element) => /против эффектов Ужаса/i.test(element.textContent ?? ""));
+    if (alreadyRendered) continue;
+
+    const formattedNote = actor.formatContextNotes?.(
+      [{ notes: [activeFearContext.contextNote], item: activeFearContext.item }],
+      actor.getRollData?.()
+    )?.[0] ?? activeFearContext.contextNote;
+    const heading = document.createElement("span");
+    heading.className = "span3 pf1e-ru-fear-will-note";
+    heading.innerHTML = "<br>Заметки";
+    const note = document.createElement("span");
+    note.className = "tooltipcontent-context pf1e-ru-fear-will-note";
+    note.innerHTML = formattedNote;
+    tooltip.append(heading, note);
+  }
 }
 
 function prepareRussianSkillRoll(actor, rollOptions, skillId) {
@@ -1407,18 +1950,37 @@ function installActorSheetTranslationObserver(app, root) {
   if (current?.root === root) return;
   current?.observer?.disconnect();
 
+  const observerOptions = { childList: true, subtree: true };
   const observer = new MutationObserver((mutations) => {
+    const addedElements = new Set();
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
         const element = node instanceof HTMLElement ? node : node.parentElement;
-        if (!(element instanceof HTMLElement)) continue;
+        if (!(element instanceof HTMLElement) || !root.contains(element)) continue;
+        addedElements.add(element);
+      }
+    }
+
+    const translationRoots = [...addedElements].filter((element, index, elements) =>
+      !elements.some((other, otherIndex) => otherIndex !== index && other.contains(element))
+    );
+    if (!translationRoots.length) return;
+
+    // Некоторые функции перевода заменяют текстовые узлы. Не наблюдаем за
+    // собственными изменениями, иначе одна перерисовка эффекта может запустить
+    // цепочку повторных обходов листа.
+    observer.disconnect();
+    try {
+      for (const element of translationRoots) {
         markActorSheetUserContent(app, element);
         translateActorSheetFixedFields(element);
         translateRenderedHtml(element);
       }
+    } finally {
+      if (root.isConnected) observer.observe(root, observerOptions);
     }
   });
-  observer.observe(root, { childList: true, subtree: true });
+  observer.observe(root, observerOptions);
   app.__pf1eRuTranslationObserver = { root, observer };
 }
 
@@ -1492,6 +2054,52 @@ function redirectReferenceBooks(root) {
   }
 }
 
+function separateFearConditions(root) {
+  if (!fearRulesEnabled() || !(root instanceof HTMLElement)) return;
+  const containers = root.querySelectorAll(
+    '.buffs-conditions, .conditions[data-group="buffs"][data-tab="conditions"]'
+  );
+
+  for (const container of containers) {
+    container.querySelectorAll(":scope > .pf1e-ru-fear-heading").forEach((heading) => heading.remove());
+    const fearNodes = FEAR_CONDITION_IDS.map((conditionId) =>
+      container.querySelector(`:scope > .condition [name="system.attributes.conditions.${conditionId}"]`)?.closest(".condition")
+    ).filter(Boolean);
+    if (!fearNodes.length) continue;
+
+    container.classList.add("pf1e-ru-fear-separated");
+    const heading = document.createElement("h2");
+    heading.className = "block-header pf1e-ru-fear-heading";
+    heading.textContent = "Состояния ужаса";
+    container.append(heading);
+    for (const condition of fearNodes) {
+      condition.classList.add("pf1e-ru-fear-condition");
+      container.append(condition);
+    }
+  }
+}
+
+function separateFearTokenStatuses(_app, html) {
+  if (!fearRulesEnabled()) return;
+  const root = html?.[0] ?? html;
+  if (!(root instanceof HTMLElement)) return;
+  const palette = root.querySelector(".status-effects");
+  if (!palette) return;
+
+  palette.querySelectorAll(":scope > .pf1e-ru-fear-token-heading").forEach((heading) => heading.remove());
+  const fearIcons = FEAR_CONDITION_IDS.map((conditionId) =>
+    palette.querySelector(`:scope > .effect-control[data-status-id="${conditionId}"]`)
+  ).filter(Boolean);
+  if (!fearIcons.length) return;
+
+  palette.classList.add("pf1e-ru-fear-token-palette");
+  const heading = document.createElement("div");
+  heading.className = "pf1e-ru-fear-token-heading";
+  heading.textContent = "Состояния ужаса";
+  palette.append(heading);
+  for (const icon of fearIcons) palette.append(icon);
+}
+
 function enableSensesScrolling(root) {
   if (!(root instanceof HTMLElement)) return;
   for (const value of root.querySelectorAll("li.attribute.senses > .attribute-value")) {
@@ -1502,7 +2110,9 @@ function enableSensesScrolling(root) {
 function markRussianRulesJournal(app, html) {
   const document = app?.document ?? app?.object;
   const packId = document?.pack ?? document?.parent?.pack;
-  if (packId !== RULES_PACK_ID) return;
+  const moduleKind = document?.getFlag?.(MODULE_ID, "kind")
+    ?? document?.parent?.getFlag?.(MODULE_ID, "kind");
+  if (packId !== RULES_PACK_ID && !String(moduleKind ?? "").startsWith("fear-")) return;
   const root = html?.[0] ?? html;
   const windowElement = app?.element?.[0] ?? root?.closest?.(".window-app");
   windowElement?.classList?.add("pf1e-ru-rules-journal");
@@ -1544,6 +2154,8 @@ function processActorSheet(app, html) {
   translateRenderedHtml(root);
   installActorSheetTranslationObserver(app, root);
   redirectReferenceBooks(root);
+  separateFearConditions(root);
+  renderFearContextNoteInWillSheetTooltip(app, root);
   enableSensesScrolling(root);
   makeActorSheetResponsive(app, root);
 }
@@ -1551,18 +2163,38 @@ function processActorSheet(app, html) {
 Hooks.on("pf1RegisterDamageTypes", registerDamageReductionBypassTypes);
 
 Hooks.once("init", () => {
+  installFoundry11CompatibilityShims();
   registerAthleticsSetting();
+  registerFearRulesSetting();
   installModuleStyles();
   applyRussianTranslations();
+  installFearRulesConfiguration();
+  installFearContextNotes();
   installSpellComponentAbbreviations();
   installPluralFormatting();
 });
 
+Hooks.once("setup", () => {
+  installFoundry11CompatibilityShims();
+  migrateHealthEstimateActiveEffectRules();
+  setTimeout(installFoundry11CompatibilityShims, 0);
+});
+Hooks.once("canvasInit", installFoundry11CompatibilityShims);
+
 Hooks.once("ready", async () => {
+  installFoundry11CompatibilityShims();
   applyRussianTranslations();
   installSpellComponentAbbreviations();
+  installFearRulesConfiguration();
+  installFearContextNotes();
   await collectCompendiumReferences();
   processRenderedChatMessages();
+  await removeActiveLegacyFearConditions().catch((error) => {
+    console.error(`${MODULE_ID} | Не удалось удалить старые состояния ужаса.`, error);
+  });
+  await syncAllHorrifiedHelpless().catch((error) => {
+    console.error(`${MODULE_ID} | Не удалось синхронизировать состояние «Беспомощен».`, error);
+  });
 
   if (game.settings.get(MODULE_ID, ATHLETICS_SETTING)) {
     await addAthleticsToExistingActors().catch(reportAthleticsError);
@@ -1576,6 +2208,33 @@ Hooks.once("ready", async () => {
 });
 
 Hooks.on("renderActorSheet", processActorSheet);
+Hooks.on("renderTokenHUD", separateFearTokenStatuses);
+Hooks.on("pf1PreActorRollSave", appendFearNoteToWillRoll);
+Hooks.on("pf1ToggleActorCondition", (actor, conditionId, active) => {
+  if (conditionId !== HORRIFIED_CONDITION_ID) return;
+  void syncHorrifiedHelpless(actor, fearRulesEnabled() && Boolean(active)).catch((error) => {
+    console.error(`${MODULE_ID} | Не удалось синхронизировать состояние «Беспомощен».`, error);
+  });
+});
+Hooks.on("createActiveEffect", (effect) => {
+  if (!effect?.statuses?.has?.(HORRIFIED_CONDITION_ID)) return;
+  void syncHorrifiedHelpless(effect.parent, fearRulesEnabled()).catch((error) => {
+    console.error(`${MODULE_ID} | Не удалось включить состояние «Беспомощен».`, error);
+  });
+});
+Hooks.on("deleteActiveEffect", (effect) => {
+  if (!effect?.statuses?.has?.(HORRIFIED_CONDITION_ID)) return;
+  void syncHorrifiedHelpless(effect.parent).catch((error) => {
+    console.error(`${MODULE_ID} | Не удалось снять связанное состояние «Беспомощен».`, error);
+  });
+});
+Hooks.on("updateActiveEffect", (effect, changes) => {
+  if (!effect?.statuses?.has?.(HORRIFIED_CONDITION_ID)
+    || !Object.hasOwn(changes ?? {}, "disabled")) return;
+  void syncHorrifiedHelpless(effect.parent).catch((error) => {
+    console.error(`${MODULE_ID} | Не удалось синхронизировать состояние «Беспомощен».`, error);
+  });
+});
 Hooks.on("createActor", (actor) => {
   if (!game.settings.get(MODULE_ID, ATHLETICS_SETTING) || !isActiveGM()) return;
   void addAthleticsToActor(actor).catch(reportAthleticsError);

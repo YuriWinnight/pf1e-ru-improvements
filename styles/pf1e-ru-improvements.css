@@ -437,3 +437,76 @@
 .pf1e-ru-rules-journal :is(.journal-entry-content, .journal-page-content, .editor-content) table :is(th, td):not(:last-child) {
   border-right: 1px solid #000 !important;
 }
+
+.pf1alt.sheet.actor :is(.conditions, .buffs-conditions).pf1e-ru-fear-separated,
+.pf1e-pg-alt-sheet.sheet.actor :is(.conditions, .buffs-conditions).pf1e-ru-fear-separated,
+.pf1.sheet.actor :is(.conditions, .buffs-conditions).pf1e-ru-fear-separated {
+  flex-wrap: wrap !important;
+}
+
+.pf1alt.sheet.actor .pf1e-ru-fear-heading,
+.pf1e-pg-alt-sheet.sheet.actor .pf1e-ru-fear-heading,
+.pf1.sheet.actor .pf1e-ru-fear-heading {
+  flex: 0 0 calc(100% - 8px) !important;
+  box-sizing: border-box;
+  width: calc(100% - 8px);
+  min-height: 24px;
+  margin: 8px 4px 4px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  color: inherit !important;
+  font-family: "Nodesto", "Signika", "Palatino Linotype", serif;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+  text-align: left;
+  display: flex;
+  align-items: center;
+}
+
+.pf1alt.sheet.actor .pf1e-ru-fear-heading::before,
+.pf1e-pg-alt-sheet.sheet.actor .pf1e-ru-fear-heading::before,
+.pf1.sheet.actor .pf1e-ru-fear-heading::before {
+  content: none !important;
+}
+
+.pf1alt.sheet.actor .pf1e-ru-fear-heading::after,
+.pf1e-pg-alt-sheet.sheet.actor .pf1e-ru-fear-heading::after,
+.pf1.sheet.actor .pf1e-ru-fear-heading::after {
+  content: "" !important;
+  flex: 1;
+  height: 0;
+  margin-left: 0.5rem;
+  border: 0 !important;
+  border-top: 2px solid #75514b !important;
+}
+
+#token-hud .status-effects.pf1e-ru-fear-token-palette .pf1e-ru-fear-token-heading {
+  grid-column: 1 / -1;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 3px;
+  padding: 4px 2px 3px;
+  border-top: 1px solid rgb(255 210 190 / 75%);
+  border-bottom: 1px solid rgb(255 255 255 / 25%);
+  color: #f3ddd3;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+}
+
+#chat-log .dice-tooltip > .pf1e-ru-fear-tooltip-note {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 6px;
+  border-top: 1px solid rgb(255 255 255 / 25%);
+  color: #fff;
+  line-height: 1.2;
+}
+
+#chat-log .dice-tooltip > .pf1e-ru-fear-tooltip-note strong {
+  color: #ddd;
+}
