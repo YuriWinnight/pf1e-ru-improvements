@@ -1398,6 +1398,7 @@ function processChatMessage(message, html) {
   const root = html?.[0] ?? html;
   translateActorRollFlavor(root);
   translateChatMetadata(root);
+  translateDamageTypeVisuals(root);
   for (const label of root?.querySelectorAll?.(".property-group > label") ?? []) {
     if (label.textContent?.trim() === "Ситуативные прим.") label.textContent = "Заметки";
   }
@@ -1657,12 +1658,36 @@ function translateRenderedHtml(root) {
   }
 }
 
+function translateWeaponPropertyCheckboxes(root) {
+  if (!isRussian() || !(root instanceof HTMLElement)) return;
+
+  const translations = new Map([
+    ["Automatic", "Автоматическое"],
+    ["Scatter", "Рассеивающее"],
+    ["Special", "Особое"]
+  ]);
+  for (const label of root.querySelectorAll(".weapon-properties label.checkbox")) {
+    const textNode = [...label.childNodes].find(
+      (node) => node.nodeType === Node.TEXT_NODE && node.nodeValue.trim()
+    );
+    if (!textNode) continue;
+
+    const translation = translations.get(textNode.nodeValue.trim());
+    if (!translation) continue;
+
+    const leading = textNode.nodeValue.match(/^\s*/)?.[0] ?? "";
+    const trailing = textNode.nodeValue.match(/\s*$/)?.[0] ?? "";
+    textNode.nodeValue = `${leading}${translation}${trailing}`;
+  }
+}
+
 function translateActorSheetFixedFields(root) {
   if (!isRussian() || !(root instanceof HTMLElement)) return;
 
   const selectors = [
     ".item-detail.item-range > label",
     ".item-detail.item-range > .tooltipcontent",
+    ".item-detail.item-attacks > .tooltipcontent",
     ".spellbook-group .item .spell-uses",
     '.item-control[data-tooltip="PF1.GiveItem"]',
     '.item-control[data-tooltip="Give Item"]',
@@ -1679,6 +1704,14 @@ function translateActorSheetFixedFields(root) {
         const node = walker.currentNode;
         const translated = translateText(node.nodeValue);
         if (translated !== node.nodeValue) node.nodeValue = translated;
+      }
+    }
+
+    if (element.matches(".item-detail.item-attacks > .tooltipcontent")) {
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        node.nodeValue = node.nodeValue.replace(/\bSqueezing(?=\s*:)/g, "Протискивается");
       }
     }
 
@@ -1754,6 +1787,28 @@ function translateDamageTraitSelector(app, root) {
     Untyped: "Без типа",
     Precision: "Точный"
   });
+}
+
+function translateDamageTypeVisuals(root) {
+  if (!isRussian() || !(root instanceof HTMLElement)) return;
+  const translations = {
+    Precision: "Точный",
+    Untyped: "Без типа"
+  };
+
+  const labels = [...root.querySelectorAll(".damage-type-visual .name")];
+  if (root.matches(".damage-type-visual .name")) labels.unshift(root);
+  for (const label of labels) {
+    const value = label.textContent?.trim();
+    if (translations[value]) label.textContent = translations[value];
+  }
+
+  const icons = [...root.querySelectorAll(".damage-type-visual .damage-type[data-tooltip]")];
+  if (root.matches(".damage-type-visual .damage-type[data-tooltip]")) icons.unshift(root);
+  for (const icon of icons) {
+    const value = icon.getAttribute("data-tooltip")?.trim();
+    if (translations[value]) icon.setAttribute("data-tooltip", translations[value]);
+  }
 }
 
 function registerDamageReductionBypassTypes(registry) {
@@ -2246,8 +2301,9 @@ Hooks.on("closeActorSheet", (app) => {
   delete app?.__pf1eRuTranslationObserver;
 });
 Hooks.on("renderItemSheet", (app, html) => {
-  if (!isNewlyCreatedItemSheet(app)) return;
   const root = html?.[0] ?? html;
+  translateWeaponPropertyCheckboxes(root);
+  if (!isNewlyCreatedItemSheet(app)) return;
   translateRenderedHtml(root);
   translateItemApplication(app, root);
 });
@@ -2264,6 +2320,7 @@ Hooks.on("pf1PreActorRollSkill", prepareRussianSkillRoll);
 Hooks.on("pf1PreActorRollSave", prepareRussianSaveRoll);
 Hooks.on("renderApplication", (app, html) => {
   const root = html?.[0] ?? html;
+  translateDamageTypeVisuals(root);
   if (app?.id === "settings-editor") translateRenderedHtml(root);
   makeSettingsEditorResizable(app, root);
 });
