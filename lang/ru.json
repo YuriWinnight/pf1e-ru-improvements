@@ -11,6 +11,10 @@
       "HorrorRules": {
         "Name": "Дополнительные правила ужаса",
         "Hint": "Заменяет стандартные состояния ужаса семью последовательными ступенями: Настороженность, Потрясение, Трепет, Испуг, Паника, Страх и Оцепенение от ужаса. Состояния выводятся отдельным разделом в листе и палитре токена и взаимно заменяют друг друга. После изменения настройки требуется перезагрузка мира."
+      },
+      "ScrollIconPicker": {
+        "Name": "Выбор иконок для свитков",
+        "Hint": "При создании свитка из заклинания открывает галерею встроенных иконок. Настройка по умолчанию выключена."
       }
     }
   },
@@ -393,6 +397,15 @@
   "PF1.IdentifyDCNumber": "СЛ Опознания {dc}",
   "PF1.CustomHitDice": "Настроить КЗ",
   "PF1.HitPoints": "Пункты здоровья",
+  "PF1.LevelUpForm_Health": "Здоровье",
+  "PF1.LevelUpForm_Health_Manual": "Вручную",
+  "PF1.LevelUp.Summary.Label": "Итог",
+  "PF1.LevelUp.Chat.Header": "Итоги повышения уровня",
+  "PF1.LevelUp.Chat.Health.Header": "Здоровье",
+  "PF1.LevelUp.Chat.Health.Manual": "Пункты здоровья вручную: {add}",
+  "PF1.LevelUp.Chat.FC.Header": "Бонус предпочитаемого класса",
+  "PF1.LevelUp.Chat.AbilityScore.Header": "Повышение характеристик",
+  "PF1.LevelUp.Chat.Extra.Header": "Дополнительно",
   "PF1.LevelUp.Health.Roll.Desc": "Количество пунктов здоровья, получаемых на этом уровне, будет определено броском кости здоровья вашего класса.",
   "PF1.LevelUp.Health.Manual.Desc": "Вы сами определите, сколько пунктов здоровья получите на этом уровне.",
   "PF1.LevelUp.FC.Label": "Бонус предпочитаемого класса",
@@ -413,5 +426,12 @@
   "PF1.Spellcasting.Type.Divine": "Сакральный",
   "PF1.Spellcasting.Type.Alchemy": "Алхимический",
   "PF1.AutoSpellClassLevelOffset.Formula": "Модификации уровня заклинателя",
-  "PF1.AutoSpellClassLevelOffset.InfoBox": "Если у вас есть престиж-класс, который изменяет ваш уровень заклинателя, добавьте его сюда (например @classes.mysticTheurge.level)"
+  "PF1.AutoSpellClassLevelOffset.InfoBox": "Если у вас есть престиж-класс, который изменяет ваш уровень заклинателя, добавьте его сюда (например @classes.mysticTheurge.level)",
+  "PF1.SpellMaterialDescription": "Описание материального компонента",
+  "PF1.SpellMaterialValue": "Стоимость материального компонента",
+  "PF1.LearnMoreSpell": "Вы можете изучить ещё 1 заклинание",
+  "PF1.LearnMoreSpells": "Вы можете изучить ещё {quantity} заклинаний",
+  "PF1.SpellScoreTooLow": "Значение вашей характеристики слишком низкое, чтобы творить заклинания этого круга.",
+  "PF1.AttackWith": "Атаковать с помощью: {name}",
+  "PF1.AttackWithSpell": "Сотворить заклинание: {name}"
 }

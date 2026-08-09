@@ -5,6 +5,7 @@ const CONDITIONS_JOURNAL_ID = "RuConditionsJrnl";
 const FEAR_JOURNAL_ID = "RuFearRulesJrnl1";
 const ATHLETICS_SETTING = "enableAthleticsSkill";
 const FEAR_RULES_SETTING = "enableHorrorRules";
+const SCROLL_ICON_PICKER_SETTING = "enableScrollIconPicker";
 const FEAR_CONTEXT_NOTES_PATCH = `${MODULE_ID}.fearContextNotesPatched`;
 const ATHLETICS_SKILL_ID = "athletics";
 const ATHLETICS_ACTOR_TYPES = new Set(["character", "npc"]);
@@ -12,6 +13,7 @@ const LEGACY_FEAR_CONDITION_IDS = ["shaken", "frightened", "panicked"];
 const HORRIFIED_CONDITION_ID = "pf1eRuFearHorrified";
 const HELPLESS_CONDITION_ID = "helpless";
 const HORRIFIED_HELPLESS_FLAG = "horrifiedHelplessManaged";
+const INFINITY_ICON_HTML = '<svg class="pf1e-ru-infinity-icon" viewBox="0 0 64 32" aria-hidden="true"><path d="M4 16 C4 6 14 3 22 8 C26 10 29 14 32 16 C35 18 38 22 42 24 C50 29 60 26 60 16 C60 6 50 3 42 8 C38 10 35 14 32 16 C29 18 26 22 22 24 C14 29 4 26 4 16 Z"/></svg>';
 const STANDARD_FEAR_CHANGES = [
   { formula: -2, operator: "add", subTarget: "attack", modifier: "penalty", priority: 0 },
   { formula: -2, operator: "add", subTarget: "allSavingThrows", modifier: "penalty", priority: 0 },
@@ -254,6 +256,17 @@ function registerFearRulesSetting() {
         console.error(`${MODULE_ID} | Не удалось применить дополнительные правила ужаса.`, error);
       });
     }
+  });
+}
+
+function registerScrollIconPickerSetting() {
+  game.settings.register(MODULE_ID, SCROLL_ICON_PICKER_SETTING, {
+    name: "PF1ERU.Settings.ScrollIconPicker.Name",
+    hint: "PF1ERU.Settings.ScrollIconPicker.Hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
   });
 }
 
@@ -623,6 +636,22 @@ const CONSUMABLE_ICONS = {
     { label: "Рогатый жезл с черепом", img: `modules/${MODULE_ID}/assets/consumables/wands/foundry-wand-skull-horned.webp` },
     { label: "Золотой звёздный жезл", img: `modules/${MODULE_ID}/assets/consumables/wands/foundry-wand-star-gold.webp` },
     { label: "Жезл-тотем", img: `modules/${MODULE_ID}/assets/consumables/wands/foundry-wand-totem.webp` }
+  ],
+  scroll: [
+    { label: "Золотой свиток с пентаграммой", img: `modules/${MODULE_ID}/assets/consumables/scrolls/scroll-pentagram-golden.png` },
+    { label: "Фиолетовый свиток с пентаграммой", img: `modules/${MODULE_ID}/assets/consumables/scrolls/scroll-pentagram-violet.png` },
+    { label: "Зелёный свиток с пентаграммой", img: `modules/${MODULE_ID}/assets/consumables/scrolls/scroll-pentagram-verdant.png` },
+    { label: "Водный свиток с пентаграммой", img: `modules/${MODULE_ID}/assets/consumables/scrolls/scroll-pentagram-tidal.png` },
+    { label: "Огненный свиток с пентаграммой", img: `modules/${MODULE_ID}/assets/consumables/scrolls/scroll-pentagram-burning.png` },
+    { label: "Свиток с фиолетовыми шипами", img: `modules/${MODULE_ID}/assets/consumables/scrolls/scroll-bound-violet-thorns.png` },
+    { label: "Свиток с изумрудной печатью", img: `modules/${MODULE_ID}/assets/consumables/scrolls/scroll-bound-emerald-seal.png` },
+    { label: "Свиток с сине-белой лентой", img: `modules/${MODULE_ID}/assets/consumables/scrolls/scroll-bound-blue-white.webp` },
+    { label: "Свиток с коричневой перевязью", img: `modules/${MODULE_ID}/assets/consumables/scrolls/scroll-bound-brown-tan.webp` },
+    { label: "Свиток с красной печатью", img: `modules/${MODULE_ID}/assets/consumables/scrolls/scroll-bound-sealed-red.webp` },
+    { label: "Свиток с черепом", img: `modules/${MODULE_ID}/assets/consumables/scrolls/scroll-bound-skull-blue.webp` },
+    { label: "Коричневый свиток с рунами", img: `modules/${MODULE_ID}/assets/consumables/scrolls/scroll-runed-brown.webp` },
+    { label: "Коричнево-фиолетовый свиток", img: `modules/${MODULE_ID}/assets/consumables/scrolls/scroll-runed-brown-purple.webp` },
+    { label: "Белый свиток с круговым символом", img: `modules/${MODULE_ID}/assets/consumables/scrolls/scroll-symbol-circle-white.webp` }
   ]
 };
 
@@ -741,6 +770,15 @@ const RU_OVERRIDES = {
   "PF1.CustomHitDice": "Настроить КЗ",
   "PF1.CustomHitDiceHint": "Вставьте формулу, например floor(@item.level / 2)",
   "PF1.HitPoints": "Пункты здоровья",
+  "PF1.LevelUpForm_Health": "Здоровье",
+  "PF1.LevelUpForm_Health_Manual": "Вручную",
+  "PF1.LevelUp.Summary.Label": "Итог",
+  "PF1.LevelUp.Chat.Header": "Итоги повышения уровня",
+  "PF1.LevelUp.Chat.Health.Header": "Здоровье",
+  "PF1.LevelUp.Chat.Health.Manual": "Пункты здоровья вручную: {add}",
+  "PF1.LevelUp.Chat.FC.Header": "Бонус предпочитаемого класса",
+  "PF1.LevelUp.Chat.AbilityScore.Header": "Повышение характеристик",
+  "PF1.LevelUp.Chat.Extra.Header": "Дополнительно",
   "PF1.LevelUp.Health.Roll.Desc":
     "Количество пунктов здоровья, получаемых на этом уровне, будет определено броском кости здоровья вашего класса.",
   "PF1.LevelUp.Health.Manual.Desc": "Вы сами определите, сколько пунктов здоровья получите на этом уровне.",
@@ -767,6 +805,13 @@ const RU_OVERRIDES = {
   "PF1.AutoSpellClassLevelOffset.Formula": "Модификации уровня заклинателя",
   "PF1.AutoSpellClassLevelOffset.InfoBox":
     "Если у вас есть престиж-класс, который изменяет ваш уровень заклинателя, добавьте его сюда (например @classes.mysticTheurge.level)",
+  "PF1.SpellMaterialDescription": "Описание материального компонента",
+  "PF1.SpellMaterialValue": "Стоимость материального компонента",
+  "PF1.LearnMoreSpell": "Вы можете изучить ещё 1 заклинание",
+  "PF1.LearnMoreSpells": "Вы можете изучить ещё {quantity} заклинаний",
+  "PF1.SpellScoreTooLow": "Значение вашей характеристики слишком низкое, чтобы творить заклинания этого круга.",
+  "PF1.AttackWith": "Атаковать с помощью: {name}",
+  "PF1.AttackWithSpell": "Сотворить заклинание: {name}",
   "PF1.AbilityTest": "Проверка характеристики {ability}",
   "PF1.TakeX": "Взять {number}",
   "PF1.InitiativeCheck": "{name}: Проверка инициативы",
@@ -1095,6 +1140,10 @@ function installPluralFormatting() {
   game.i18n.format = function (stringId, data = {}) {
     if (isRussian()) {
       if (stringId === "PF1.NewItem") return russianNewItemName(data.type);
+      if (stringId === "PF1.LearnMoreSpell" || stringId === "PF1.LearnMoreSpells") {
+        const quantity = Number(data.quantity ?? 1);
+        return `Вы можете изучить ещё ${quantity} ${russianSpellWord(quantity)}`;
+      }
       if (stringId === "PF1.PrepareMoreSpell" || stringId === "PF1.PrepareMoreSpells") {
         const quantity = Number(data.quantity ?? 1);
         return `Вы можете подготовить на ${quantity} ${russianSpellWord(quantity)} больше`;
@@ -1247,6 +1296,12 @@ function translateText(value) {
   })();
 
   return pluralizeRenderedWarnings(exact)
+    .replace(/You can learn (\d+) more spells?/gi, (_, quantity) => {
+      const count = Number(quantity);
+      return `Вы можете изучить ещё ${count} ${russianSpellWord(count)}`;
+    })
+    .replace(/Your ability score is too low to cast spells of this level/gi,
+      "Значение вашей характеристики слишком низкое, чтобы творить заклинания этого круга.")
     .replace(/([^\r\n]+?)\s+Ability Test\b/gi, (_, ability) => `Проверка характеристики ${ability.trim()}`)
     .replace(/\bFortitude Saving Throw\b/gi, "Испытание Стойкости")
     .replace(/\bReflex Saving Throw\b/gi, "Испытание Реакции")
@@ -1394,10 +1449,79 @@ function translateChatMetadata(root) {
   }
 }
 
+function translateLevelUpForm(root) {
+  if (!isRussian() || !(root instanceof HTMLElement)) return;
+  replaceExactRenderedText(root, {
+    Summary: "Итог",
+    Health: "Здоровье",
+    Manual: "Вручную",
+    "Ручной": "Вручную",
+    "Favoured Class Bonus": "Бонус предпочитаемого класса"
+  });
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    node.nodeValue = (node.nodeValue ?? "").replace(
+      /Manual health:\s*/gi,
+      "Пункты здоровья вручную: "
+    );
+  }
+}
+
+function translateLevelUpReport(root) {
+  if (!isRussian() || !(root instanceof HTMLElement)) return;
+  const report = root.matches(".level-up") ? root : root.querySelector(".level-up");
+  if (!report) return;
+
+  const headings = {
+    "Level Up Report": "Итоги повышения уровня",
+    Health: "Здоровье",
+    "Favoured Class Bonus": "Бонус предпочитаемого класса",
+    "Ability Score Increase": "Повышение характеристик",
+    Extra: "Дополнительно"
+  };
+  for (const heading of report.querySelectorAll("h1, h2")) {
+    const replacement = headings[heading.textContent?.trim()];
+    if (replacement) heading.textContent = replacement;
+  }
+
+  const walker = document.createTreeWalker(report, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    node.nodeValue = (node.nodeValue ?? "").replace(
+      /Manual health:\s*/gi,
+      "Пункты здоровья вручную: "
+    );
+  }
+}
+
+function translateTokenQuickActions(root) {
+  if (!isRussian() || !(root instanceof HTMLElement)) return;
+
+  for (const icon of root.querySelectorAll(".token-quick-action > img[data-tooltip]")) {
+    const tooltip = icon.getAttribute("data-tooltip") ?? "";
+    const translated = tooltip
+      .replace(/^Attack with:\s*/i, "Атаковать с помощью: ")
+      .replace(/^Cast spell:\s*/i, "Сотворить заклинание: ");
+    if (translated !== tooltip) icon.setAttribute("data-tooltip", translated);
+  }
+
+  for (const charges of root.querySelectorAll(".token-quick-action charges")) {
+    const value = (charges.textContent ?? "").replace(/\s+/g, "");
+    if (!/^(?:NaN|Infinity)(?:\/(?:NaN|Infinity))?$/i.test(value)) continue;
+    charges.innerHTML = INFINITY_ICON_HTML;
+    charges.classList.add("pf1e-ru-infinite");
+    charges.setAttribute("aria-label", "Неограниченно");
+    charges.setAttribute("data-tooltip", "Неограниченно");
+  }
+}
+
 function processChatMessage(message, html) {
   const root = html?.[0] ?? html;
   translateActorRollFlavor(root);
   translateChatMetadata(root);
+  translateLevelUpReport(root);
   translateDamageTypeVisuals(root);
   for (const label of root?.querySelectorAll?.(".property-group > label") ?? []) {
     if (label.textContent?.trim() === "Ситуативные прим.") label.textContent = "Заметки";
@@ -1539,7 +1663,10 @@ function trackConsumableIconChoice(app, root) {
   for (const button of dialogRoot.querySelectorAll("button[data-button]")) {
     button.addEventListener("click", () => {
       const type = button.dataset.button;
-      pendingConsumableIconChoice = type === "potion" || type === "wand"
+      const scrollPickerEnabled = game.settings.get(MODULE_ID, SCROLL_ICON_PICKER_SETTING);
+      pendingConsumableIconChoice = type === "potion"
+        || type === "wand"
+        || (type === "scroll" && scrollPickerEnabled)
         ? { type, createdAt: Date.now() }
         : null;
     }, { capture: true, once: true });
@@ -1563,7 +1690,11 @@ function iconPickerContent(type) {
 }
 
 async function chooseConsumableIcon(item, type) {
-  const noun = type === "potion" ? "зелья" : "жезла";
+  const noun = {
+    potion: "зелья",
+    wand: "жезла",
+    scroll: "свитка"
+  }[type] ?? "предмета";
   const selected = await Dialog.wait({
     title: `Выберите иконку для ${noun}`,
     content: iconPickerContent(type),
@@ -1681,6 +1812,15 @@ function translateWeaponPropertyCheckboxes(root) {
   }
 }
 
+function translateScriptCallSectionLabels(root) {
+  if (!isRussian() || !(root instanceof HTMLElement)) return;
+  for (const label of root.querySelectorAll(
+    ".script-calls > ol.item-list > .item-list-header .item-name > h3"
+  )) {
+    if (label.textContent?.trim() === "Use") label.textContent = "Использование";
+  }
+}
+
 function translateActorSheetFixedFields(root) {
   if (!isRussian() || !(root instanceof HTMLElement)) return;
 
@@ -1718,7 +1858,7 @@ function translateActorSheetFixedFields(root) {
     if (element.matches(".spellbook-group .item .spell-uses")) {
       const value = String(element.textContent ?? "").trim().toLocaleLowerCase("ru-RU");
       if (value === "неограниченно" || value === "at will") {
-        element.innerHTML = '<svg class="pf1e-ru-infinity-icon" viewBox="0 0 64 32" aria-hidden="true"><path d="M4 16 C4 6 14 3 22 8 C26 10 29 14 32 16 C35 18 38 22 42 24 C50 29 60 26 60 16 C60 6 50 3 42 8 C38 10 35 14 32 16 C29 18 26 22 22 24 C14 29 4 26 4 16 Z"/></svg>';
+        element.innerHTML = INFINITY_ICON_HTML;
         element.classList.add("pf1e-ru-at-will");
         element.setAttribute("aria-label", "Неограниченно");
         element.setAttribute("data-tooltip", "Неограниченно");
@@ -2221,6 +2361,7 @@ Hooks.once("init", () => {
   installFoundry11CompatibilityShims();
   registerAthleticsSetting();
   registerFearRulesSetting();
+  registerScrollIconPickerSetting();
   installModuleStyles();
   applyRussianTranslations();
   installFearRulesConfiguration();
@@ -2263,7 +2404,10 @@ Hooks.once("ready", async () => {
 });
 
 Hooks.on("renderActorSheet", processActorSheet);
-Hooks.on("renderTokenHUD", separateFearTokenStatuses);
+Hooks.on("renderTokenHUD", (app, html) => {
+  separateFearTokenStatuses(app, html);
+  translateTokenQuickActions(html?.[0] ?? html);
+});
 Hooks.on("pf1PreActorRollSave", appendFearNoteToWillRoll);
 Hooks.on("pf1ToggleActorCondition", (actor, conditionId, active) => {
   if (conditionId !== HORRIFIED_CONDITION_ID) return;
@@ -2303,6 +2447,7 @@ Hooks.on("closeActorSheet", (app) => {
 Hooks.on("renderItemSheet", (app, html) => {
   const root = html?.[0] ?? html;
   translateWeaponPropertyCheckboxes(root);
+  translateScriptCallSectionLabels(root);
   if (!isNewlyCreatedItemSheet(app)) return;
   translateRenderedHtml(root);
   translateItemApplication(app, root);
@@ -2331,6 +2476,7 @@ Hooks.on("renderDialog", (app, html) => {
   translateRenderedHtml(root);
   if (isCreation) trackConsumableIconChoice(app, root);
 });
+Hooks.on("renderLevelUpForm", (_app, html) => translateLevelUpForm(html?.[0] ?? html));
 Hooks.on("renderSensesSelector", (_app, html) => translateRenderedHtml(html?.[0] ?? html));
 Hooks.on("renderDamageTypeSelector", (_app, html) => translateDamageTypeSelector(html?.[0] ?? html));
 Hooks.on("renderActorTraitSelector", (app, html) => translateDamageTraitSelector(app, html?.[0] ?? html));

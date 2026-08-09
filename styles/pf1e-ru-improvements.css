@@ -123,6 +123,24 @@
   stroke-linejoin: round;
 }
 
+#token-hud .token-quick-action charges.pf1e-ru-infinite {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 2px;
+}
+
+#token-hud .token-quick-action charges.pf1e-ru-infinite > svg.pf1e-ru-infinity-icon {
+  width: 24px;
+  height: 12px;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .pf1alt.sheet.actor .inventory-filters .filter-list,
 .pf1e-pg-alt-sheet.sheet.actor .inventory-filters .filter-list,
 .pf1alt .inventory-filters .filter-list,
