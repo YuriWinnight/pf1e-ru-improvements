@@ -810,6 +810,8 @@ const RU_OVERRIDES = {
   "PF1.LearnMoreSpell": "Вы можете изучить ещё 1 заклинание",
   "PF1.LearnMoreSpells": "Вы можете изучить ещё {quantity} заклинаний",
   "PF1.SpellScoreTooLow": "Значение вашей характеристики слишком низкое, чтобы творить заклинания этого круга.",
+  "PF1.LevelUp.Chat.Extra.NewFeat": "У вас есть новая черта на выбор",
+  "PF1.LevelUp.Chat.Extra.NewFeats": "У вас есть новые черты на выбор: {newValue}",
   "PF1.AttackWith": "Атаковать с помощью: {name}",
   "PF1.AttackWithSpell": "Сотворить заклинание: {name}",
   "PF1.AbilityTest": "Проверка характеристики {ability}",
@@ -837,6 +839,9 @@ const RU_OVERRIDES = {
   "PF1.CondTypeDeathEffects": "Эффекты смерти",
   "PF1.Info.NotFunctioning": "В настоящее время система не использует эту функцию.",
   "PF1.LanguageAndroffan": "Андроффан",
+  "PF1.LanguagePolyglot": "Полиглот",
+  "PF1.LanguageTelepathy": "Телепатия",
+  "PF1.SkillFly": "Полёт",
   "PF1.Notes": "Заметки",
   "PF1.NewItem": "Новый {type}",
   "PF1.WeaponGroupAxes": "Топоры",
@@ -924,6 +929,17 @@ const EXACT_RENDERED_TRANSLATIONS = {
     "В качестве бонуса предпочитаемого класса на этом уровне вы получите 1 пункт навыка, который сможете распределить по своему усмотрению.",
   "You will gain something specific for your class and race combination as your favoured class bonus for this level.":
     "В качестве бонуса предпочитаемого класса на этом уровне вы получите особый бонус, зависящий от сочетания вашей расы и класса.",
+  "Needed concentration rolls": "СЛ проверок концентрации",
+  Defensive: "Оборонительное сотворение",
+  "Vigorous Motion": "Тряска",
+  "Violent Motion": "Сильная тряска",
+  "Extremely Violent Motion": "Очень сильная тряска",
+  "High wind carrying blinding rain/sleet": "Сильный ветер со снегом или дождем",
+  "Wind-driven hail/dust/debris": "Сильный ветер с градом",
+  "Always succeeds": "Всегда успешно",
+  "You cannot cast spells of this level because your ability score is not high enough":
+    "Вы не можете применять заклинания этого круга, поскольку значение вашей характеристики недостаточно высоко",
+  "You have 1 new feat to choose": "У вас есть новая черта на выбор",
   "Pressing Normal opens a short wizard, while pressing Raw will add the class without any alterations.":
     "Нажмите «Обычный», чтобы открыть короткий мастер настройки, или «Без изменений», чтобы добавить класс без каких-либо правок.",
   "Damage Reduction Selection": "Выбор снижения урона",
@@ -942,6 +958,7 @@ const EXACT_RENDERED_TRANSLATIONS = {
   "You can separate distinct entries with semicolon (;).": "Несколько значений можно разделить точкой с запятой (;).",
   "The system (currently) doesn't use this feature": "В настоящее время система не использует эту функцию.",
   Androffan: "Андроффан",
+  "Полет": "Полёт",
   Notes: "Заметки",
   Roll: "Бросок",
   "Linked children are deleted from the actor when the link parent (this item) is deleted.":
@@ -1094,6 +1111,9 @@ function refreshLocalizedPf1Config() {
     [pf1.config.ammoTypes, "dart", "PF1.AmmoTypeDart"],
     [pf1.config.ammoTypes, "siege", "PF1.AmmoTypeSiege"],
     [pf1.config.languages, "androffan", "PF1.LanguageAndroffan"],
+    [pf1.config.languages, "polyglot", "PF1.LanguagePolyglot"],
+    [pf1.config.languages, "telepathy", "PF1.LanguageTelepathy"],
+    [pf1.config.skills, "fly", "PF1.SkillFly"],
     [pf1.config.bonusModifiers, "haste", "PF1.BonusModifierHaste"],
     [pf1.config.conditionTypes, "deathEffects", "PF1.CondTypeDeathEffects"],
     [pf1.config.abilityActivationTypes, "nonaction", "PF1.ActivationTypeNonaction"],
@@ -1104,7 +1124,16 @@ function refreshLocalizedPf1Config() {
   ];
 
   for (const [collection, key, translationKey] of entries) {
-    if (collection && key in collection) collection[key] = RU_OVERRIDES[translationKey];
+    if (collection && (key in collection || translationKey === "PF1.LanguageTelepathy")) {
+      collection[key] = RU_OVERRIDES[translationKey];
+    }
+  }
+
+  if (pf1.config.languages) {
+    const sortedLanguages = Object.entries(pf1.config.languages)
+      .sort(([, left], [, right]) => String(left).localeCompare(String(right), "ru"));
+    for (const key of Object.keys(pf1.config.languages)) delete pf1.config.languages[key];
+    Object.assign(pf1.config.languages, Object.fromEntries(sortedLanguages));
   }
 
   if (pf1.config.buffTargets?.unskills) pf1.config.buffTargets.unskills.label = RU_OVERRIDES["PF1.BuffTarUntrainedSkills"];
@@ -1122,6 +1151,16 @@ function russianSpellWord(quantity) {
   if (last === 1) return "заклинание";
   if (last >= 2 && last <= 4) return "заклинания";
   return "заклинаний";
+}
+
+function russianFeatPhrase(quantity) {
+  const value = Math.abs(Number(quantity));
+  const lastTwo = value % 100;
+  const last = value % 10;
+  if (lastTwo >= 11 && lastTwo <= 14) return `${value} новых черт`;
+  if (last === 1) return `${value} новая черта`;
+  if (last >= 2 && last <= 4) return `${value} новые черты`;
+  return `${value} новых черт`;
 }
 
 function russianNewItemName(typeLabel) {
@@ -1302,6 +1341,18 @@ function translateText(value) {
     })
     .replace(/Your ability score is too low to cast spells of this level/gi,
       "Значение вашей характеристики слишком низкое, чтобы творить заклинания этого круга.")
+    .replace(/You cannot cast spells of this level because your ability score is not high enough/gi,
+      "Вы не можете применять заклинания этого круга, поскольку значение вашей характеристики недостаточно высоко")
+    .replace(/You have (\d+) new feats? to choose/gi, (_, quantity) =>
+      `У вас есть ${russianFeatPhrase(Number(quantity))} на выбор`)
+    .replace(/Needed concentration rolls/gi, "СЛ проверок концентрации")
+    .replace(/Extremely Violent Motion/gi, "Очень сильная тряска")
+    .replace(/Violent Motion/gi, "Сильная тряска")
+    .replace(/Vigorous Motion/gi, "Тряска")
+    .replace(/High wind carrying blinding rain\/sleet/gi, "Сильный ветер со снегом или дождем")
+    .replace(/Wind-driven hail\/dust\/debris/gi, "Сильный ветер с градом")
+    .replace(/Always succeeds/gi, "Всегда успешно")
+    .replace(/\bDefensive\b/gi, "Оборонительное сотворение")
     .replace(/([^\r\n]+?)\s+Ability Test\b/gi, (_, ability) => `Проверка характеристики ${ability.trim()}`)
     .replace(/\bFortitude Saving Throw\b/gi, "Испытание Стойкости")
     .replace(/\bReflex Saving Throw\b/gi, "Испытание Реакции")
@@ -1489,10 +1540,10 @@ function translateLevelUpReport(root) {
   const walker = document.createTreeWalker(report, NodeFilter.SHOW_TEXT);
   while (walker.nextNode()) {
     const node = walker.currentNode;
-    node.nodeValue = (node.nodeValue ?? "").replace(
+    node.nodeValue = translateText((node.nodeValue ?? "").replace(
       /Manual health:\s*/gi,
       "Пункты здоровья вручную: "
-    );
+    ));
   }
 }
 
@@ -2354,8 +2405,6 @@ function processActorSheet(app, html) {
   enableSensesScrolling(root);
   makeActorSheetResponsive(app, root);
 }
-
-Hooks.on("pf1RegisterDamageTypes", registerDamageReductionBypassTypes);
 
 Hooks.once("init", () => {
   installFoundry11CompatibilityShims();
