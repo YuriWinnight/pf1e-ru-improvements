@@ -1,5 +1,7 @@
-2026/08/01-05:22:22.777 5dcc Recovering log #67
-2026/08/01-05:22:22.777 5dcc Level-0 table #69: started
-2026/08/01-05:22:22.782 5dcc Level-0 table #69: 6182 bytes OK
-2026/08/01-05:22:22.792 5dcc Delete type=0 #67
-2026/08/01-05:22:22.792 5dcc Delete type=3 #66
+2026/08/20-16:42:50.861 b73c Recovering log #80
+2026/08/20-16:42:50.861 b73c Level-0 table #82: started
+2026/08/20-16:42:50.872 b73c Level-0 table #82: 1486 bytes OK
+2026/08/20-16:42:50.880 b73c Delete type=0 #80
+2026/08/20-16:42:50.880 b73c Delete type=3 #79
+2026/08/20-16:42:50.880 92f0 Compacting 4@0 + 0@1 files
+2026/08/20-16:42:50.883 92f0 compacted to: files[ 4 0 0 0 0 0 0 ]

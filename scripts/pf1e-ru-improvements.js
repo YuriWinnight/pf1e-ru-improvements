@@ -6,10 +6,15 @@ const FEAR_JOURNAL_ID = "RuFearRulesJrnl1";
 const ATHLETICS_SETTING = "enableAthleticsSkill";
 const FEAR_RULES_SETTING = "enableHorrorRules";
 const SCROLL_ICON_PICKER_SETTING = "enableScrollIconPicker";
-const FEAR_CONTEXT_NOTES_PATCH = `${MODULE_ID}.fearContextNotesPatched`;
+const CONDITION_CONTEXT_NOTES_PATCH = `${MODULE_ID}.conditionContextNotesPatched`;
 const ATHLETICS_SKILL_ID = "athletics";
 const ATHLETICS_ACTOR_TYPES = new Set(["character", "npc"]);
 const LEGACY_FEAR_CONDITION_IDS = ["shaken", "frightened", "panicked"];
+const FASCINATED_CONDITION_ID = "fascinated";
+const FASCINATED_CONDITION_NAME = "Заворожён";
+const FASCINATED_CONDITION_PAGE_ID = "Hy0MHwpRRr5QxVj5";
+const FASCINATED_CONDITION_ICON = `modules/${MODULE_ID}/assets/conditions/fascinated.png`;
+const FASCINATED_CONTEXT_NOTE = "-[[4]] ко всем проверкам навыков, предпринимаемым в качестве ответных действий";
 const HORRIFIED_CONDITION_ID = "pf1eRuFearHorrified";
 const HELPLESS_CONDITION_ID = "helpless";
 const HORRIFIED_HELPLESS_FLAG = "horrifiedHelplessManaged";
@@ -245,7 +250,7 @@ function registerFearRulesSetting() {
     onChange: (enabled) => {
       if (!enabled || !game.ready) return;
       installFearRulesConfiguration();
-      installFearContextNotes();
+      installConditionContextNotes();
       void Promise.all([
         collectCompendiumReferences(),
         removeActiveLegacyFearConditions(),
@@ -395,6 +400,48 @@ function fearJournalPageUuid(pageId) {
   return `Compendium.${RULES_PACK_ID}.JournalEntry.${FEAR_JOURNAL_ID}.JournalEntryPage.${pageId}`;
 }
 
+function conditionJournalPageUuid(pageId) {
+  return `Compendium.${RULES_PACK_ID}.JournalEntry.${CONDITIONS_JOURNAL_ID}.JournalEntryPage.${pageId}`;
+}
+
+function installStandardConditionConfiguration() {
+  const config = globalThis.pf1?.config;
+  if (!config?.conditions || !config?.conditionTextures || !config?.conditionMechanics) return;
+
+  const translatedConditions = new Map([
+    ["cowering", { name: RU_OVERRIDES["PF1.CondCowering"], icon: config.conditionTextures.cowering }],
+    ["squeezing", { name: RU_OVERRIDES["PF1.CondSqueezing"], icon: config.conditionTextures.squeezing }],
+    [FASCINATED_CONDITION_ID, { name: FASCINATED_CONDITION_NAME, icon: FASCINATED_CONDITION_ICON }]
+  ]);
+
+  config.conditions.cowering = RU_OVERRIDES["PF1.CondCowering"];
+  config.conditions.squeezing = RU_OVERRIDES["PF1.CondSqueezing"];
+  config.conditions[FASCINATED_CONDITION_ID] = FASCINATED_CONDITION_NAME;
+  config.conditionTextures[FASCINATED_CONDITION_ID] = FASCINATED_CONDITION_ICON;
+  config.conditionMechanics[FASCINATED_CONDITION_ID] = { changes: [] };
+  config.conditionCompendiumEntries ??= {};
+  config.conditionCompendiumEntries[FASCINATED_CONDITION_ID] = conditionJournalPageUuid(FASCINATED_CONDITION_PAGE_ID);
+
+  CONFIG.statusEffects ??= [];
+  for (const [conditionId, condition] of translatedConditions) {
+    const existing = CONFIG.statusEffects.find((effect) =>
+      typeof effect !== "string" && effect?.id === conditionId
+    );
+    if (existing) {
+      existing.label = condition.name;
+      existing.name = condition.name;
+      if (condition.icon) existing.icon = condition.icon;
+      continue;
+    }
+    CONFIG.statusEffects.push({
+      id: conditionId,
+      label: condition.name,
+      name: condition.name,
+      icon: condition.icon
+    });
+  }
+}
+
 function installFearRulesConfiguration() {
   if (!fearRulesEnabled()) return;
   const config = globalThis.pf1?.config;
@@ -440,23 +487,32 @@ function refreshFearRuleInterfaces() {
   if (canvas?.tokens?.hud?.rendered) canvas.tokens.hud.render();
 }
 
-function installFearContextNotes() {
+function installConditionContextNotes() {
   const actorPrototype = CONFIG.Actor?.documentClass?.prototype;
   const originalGetContextNotes = actorPrototype?.getContextNotes;
-  if (typeof originalGetContextNotes !== "function" || actorPrototype[FEAR_CONTEXT_NOTES_PATCH]) return;
+  if (typeof originalGetContextNotes !== "function" || actorPrototype[CONDITION_CONTEXT_NOTES_PATCH]) return;
 
-  Object.defineProperty(actorPrototype, FEAR_CONTEXT_NOTES_PATCH, {
+  Object.defineProperty(actorPrototype, CONDITION_CONTEXT_NOTES_PATCH, {
     value: true,
     configurable: false,
     enumerable: false,
     writable: false
   });
 
-  actorPrototype.getContextNotes = function pf1eRuFearContextNotes(context) {
+  actorPrototype.getContextNotes = function pf1eRuConditionContextNotes(context) {
     const result = originalGetContextNotes.call(this, context) ?? [];
-    if (!fearRulesEnabled()) return result;
-
     const contextKey = context?.string ?? context;
+
+    if (actorHasFearCondition(this, FASCINATED_CONDITION_ID)
+      && /^skill\./.test(String(contextKey ?? ""))) {
+      const alreadyIncluded = result.some((entry) => entry?.notes?.includes?.(FASCINATED_CONTEXT_NOTE));
+      if (!alreadyIncluded) result.push({
+        notes: [FASCINATED_CONTEXT_NOTE],
+        item: null
+      });
+    }
+
+    if (!fearRulesEnabled()) return result;
     if (contextKey !== "savingThrow.will") return result;
 
     const activeFearContext = getActiveFearContextEntry(this);
@@ -700,6 +756,7 @@ const RU_OVERRIDES = {
   "PF1.TouchAttackShort": "Атакует по касанию",
   "PF1.CondCowering": "В оцепенении",
   "PF1.CondSqueezing": "Протискивается",
+  "PF1.CondFascinated": "Заворожён",
   "PF1.SearchFilterPlaceholder": "Поиск...",
   "PF1.ItemContainerTotalValue": "Общее богатство: {gp} ЗМ, {sp} СМ, {cp} ММ",
   "PF1.ItemContainerTotalItemValue": "Общее богатство: {gp} ЗМ, {sp} СМ, {cp} ММ",
@@ -934,7 +991,7 @@ const EXACT_RENDERED_TRANSLATIONS = {
   "Vigorous Motion": "Тряска",
   "Violent Motion": "Сильная тряска",
   "Extremely Violent Motion": "Очень сильная тряска",
-  "High wind carrying blinding rain/sleet": "Сильный ветер со снегом или дождем",
+  "High wind carrying blinding rain/sleet": "Сильный ветер со снегом и дождём",
   "Wind-driven hail/dust/debris": "Сильный ветер с градом",
   "Always succeeds": "Всегда успешно",
   "You cannot cast spells of this level because your ability score is not high enough":
@@ -1052,6 +1109,7 @@ function applyRussianTranslations() {
   if (!isRussian()) return;
   for (const [path, value] of Object.entries(RU_OVERRIDES)) setTranslation(path, value);
   refreshLocalizedPf1Config();
+  installStandardConditionConfiguration();
 }
 
 function installSpellComponentAbbreviations() {
@@ -1349,7 +1407,7 @@ function translateText(value) {
     .replace(/Extremely Violent Motion/gi, "Очень сильная тряска")
     .replace(/Violent Motion/gi, "Сильная тряска")
     .replace(/Vigorous Motion/gi, "Тряска")
-    .replace(/High wind carrying blinding rain\/sleet/gi, "Сильный ветер со снегом или дождем")
+    .replace(/High wind carrying blinding rain\/sleet/gi, "Сильный ветер со снегом и дождём")
     .replace(/Wind-driven hail\/dust\/debris/gi, "Сильный ветер с градом")
     .replace(/Always succeeds/gi, "Всегда успешно")
     .replace(/\bDefensive\b/gi, "Оборонительное сотворение")
@@ -1637,9 +1695,37 @@ function renderFearContextNoteInWillSheetTooltip(app, root) {
 
 function prepareRussianSkillRoll(actor, rollOptions, skillId) {
   if (!isRussian()) return;
+  appendFascinatedNoteToSkillRoll(actor, rollOptions);
   const uuid = findSkillJournalUuid({ actor, skillId });
   if (!uuid) return;
   rollOptions.compendium = { entry: uuid, type: "JournalEntryPage" };
+}
+
+function appendFascinatedNoteToSkillRoll(actor, rollOptions) {
+  if (!actorHasFearCondition(actor, FASCINATED_CONDITION_ID)) return;
+
+  rollOptions.chatTemplateData ??= {};
+  const properties = rollOptions.chatTemplateData.properties ??= [];
+  const alreadyIncluded = properties.some((property) =>
+    Array.from(property?.value ?? []).some((value) =>
+      /проверкам навыков.*ответных действий/i.test(String(value))
+    )
+  );
+  if (alreadyIncluded) {
+    rollOptions.chatTemplateData.hasProperties = true;
+    return;
+  }
+
+  const formattedNote = actor.formatContextNotes?.(
+    [{ notes: [FASCINATED_CONTEXT_NOTE], item: null }],
+    rollOptions.rollData
+  )?.[0] ?? FASCINATED_CONTEXT_NOTE;
+  properties.push({
+    header: game.i18n.localize("PF1.Notes"),
+    value: [formattedNote],
+    css: "pf1e-ru-fascinated-context-note"
+  });
+  rollOptions.chatTemplateData.hasProperties = true;
 }
 
 function processRenderedChatMessages() {
@@ -2362,6 +2448,13 @@ function markRussianRulesJournal(app, html) {
   const root = html?.[0] ?? html;
   const windowElement = app?.element?.[0] ?? root?.closest?.(".window-app");
   windowElement?.classList?.add("pf1e-ru-rules-journal");
+
+  if (document?.id === FASCINATED_CONDITION_PAGE_ID
+    || document?.pages?.has?.(FASCINATED_CONDITION_PAGE_ID)) {
+    for (const element of windowElement?.querySelectorAll?.(".page-title, h1, .window-title") ?? []) {
+      if (element.textContent?.trim() === "Завороженность") element.textContent = "Заворожённость";
+    }
+  }
 }
 
 function markActorSheetUserContent(app, root) {
@@ -2414,7 +2507,7 @@ Hooks.once("init", () => {
   installModuleStyles();
   applyRussianTranslations();
   installFearRulesConfiguration();
-  installFearContextNotes();
+  installConditionContextNotes();
   installSpellComponentAbbreviations();
   installPluralFormatting();
 });
@@ -2431,7 +2524,7 @@ Hooks.once("ready", async () => {
   applyRussianTranslations();
   installSpellComponentAbbreviations();
   installFearRulesConfiguration();
-  installFearContextNotes();
+  installConditionContextNotes();
   await collectCompendiumReferences();
   processRenderedChatMessages();
   await removeActiveLegacyFearConditions().catch((error) => {
