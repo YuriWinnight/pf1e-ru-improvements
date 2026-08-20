@@ -7,6 +7,7 @@ const ATHLETICS_SETTING = "enableAthleticsSkill";
 const FEAR_RULES_SETTING = "enableHorrorRules";
 const SCROLL_ICON_PICKER_SETTING = "enableScrollIconPicker";
 const CONDITION_CONTEXT_NOTES_PATCH = `${MODULE_ID}.conditionContextNotesPatched`;
+const DAMAGE_REDUCTION_FORMAT_PATCH = `${MODULE_ID}.damageReductionFormatPatched`;
 const ATHLETICS_SKILL_ID = "athletics";
 const ATHLETICS_ACTOR_TYPES = new Set(["character", "npc"]);
 const LEGACY_FEAR_CONDITION_IDS = ["shaken", "frightened", "panicked"];
@@ -2088,15 +2089,52 @@ function translateDamageTypeVisuals(root) {
   }
 }
 
-function registerDamageReductionBypassTypes(registry) {
-  for (const [id, name] of DAMAGE_REDUCTION_BYPASS_TYPES) {
-    if (registry.has(id)) continue;
-    registry.register(MODULE_ID, id, {
-      name,
-      category: "physical",
-      flags: { [MODULE_ID]: { damageReductionBypass: true } }
+function installDamageReductionDisplayFix() {
+  const sheetPrototype = globalThis.pf1?.applications?.actor?.ActorSheetPF?.prototype;
+  const originalPrepareResistance = sheetPrototype?._prepareResistance;
+  if (typeof originalPrepareResistance !== "function" || sheetPrototype[DAMAGE_REDUCTION_FORMAT_PATCH]) return;
+
+  Object.defineProperty(sheetPrototype, DAMAGE_REDUCTION_FORMAT_PATCH, {
+    value: true,
+    configurable: false,
+    enumerable: false,
+    writable: false
+  });
+
+  sheetPrototype._prepareResistance = function pf1eRuPrepareResistance(damages, damageType) {
+    const result = originalPrepareResistance.call(this, damages, damageType);
+    if (damageType !== "dr" || !Array.isArray(damages?.value)) return result;
+
+    const typeName = (typeId) => {
+      const id = String(typeId ?? "").toLowerCase();
+      if (!id) return "";
+      return DAMAGE_REDUCTION_BYPASS_TYPES.get(id)
+        ?? globalThis.pf1?.registry?.damageTypes?.get(id)?.name
+        ?? "-";
+    };
+
+    damages.value.forEach((entry, counter) => {
+      const firstId = String(entry?.types?.[0] ?? "").toLowerCase();
+      const secondId = String(entry?.types?.[1] ?? "").toLowerCase();
+      if (!DAMAGE_REDUCTION_BYPASS_TYPES.has(firstId)
+        && !DAMAGE_REDUCTION_BYPASS_TYPES.has(secondId)) return;
+
+      const firstType = typeName(firstId);
+      const secondType = typeName(secondId);
+      let bypassLabel = firstType;
+      if (secondType) {
+        const localizationKey = entry.operator === false
+          ? "PF1.Application.DamageResistanceSelector.CombinationFormattedAnd"
+          : "PF1.Application.DamageResistanceSelector.CombinationFormattedOr";
+        bypassLabel = game.i18n.format(localizationKey, {
+          type1: firstType,
+          type2: secondType
+        });
+      }
+      result[String(counter + 1)] = `${entry.amount}/${bypassLabel}`;
     });
-  }
+    return result;
+  };
 }
 
 function enhanceResistanceSelector(app, root) {
@@ -2506,6 +2544,7 @@ Hooks.once("init", () => {
   registerScrollIconPickerSetting();
   installModuleStyles();
   applyRussianTranslations();
+  installDamageReductionDisplayFix();
   installFearRulesConfiguration();
   installConditionContextNotes();
   installSpellComponentAbbreviations();
@@ -2522,6 +2561,7 @@ Hooks.once("canvasInit", installFoundry11CompatibilityShims);
 Hooks.once("ready", async () => {
   installFoundry11CompatibilityShims();
   applyRussianTranslations();
+  installDamageReductionDisplayFix();
   installSpellComponentAbbreviations();
   installFearRulesConfiguration();
   installConditionContextNotes();
