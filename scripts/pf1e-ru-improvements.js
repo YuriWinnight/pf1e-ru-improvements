@@ -55,7 +55,7 @@ const FEAR_CONDITIONS = [
     englishName: "Scared",
     pageId: "RuFearScared0001",
     icon: `modules/${MODULE_ID}/assets/conditions/fear/scared.svg`,
-    contextNote: "-[[4]] (штраф) против эффектов Ужаса",
+    contextNote: "-[[2]] (штраф) против эффектов Ужаса",
     mechanics: { changes: STANDARD_FEAR_CHANGES }
   },
   {
@@ -64,7 +64,6 @@ const FEAR_CONDITIONS = [
     englishName: "Frightened",
     pageId: "RuFearFrightened",
     icon: `modules/${MODULE_ID}/assets/conditions/fear/frightened.svg`,
-    contextNote: "-[[4]] (штраф) против эффектов Ужаса",
     mechanics: { changes: STANDARD_FEAR_CHANGES }
   },
   {
@@ -73,7 +72,6 @@ const FEAR_CONDITIONS = [
     englishName: "Panicked",
     pageId: "RuFearPanicked01",
     icon: `modules/${MODULE_ID}/assets/conditions/fear/panicked.svg`,
-    contextNote: "-[[4]] (штраф) против эффектов Ужаса",
     mechanics: { changes: STANDARD_FEAR_CHANGES }
   },
   {
@@ -82,7 +80,6 @@ const FEAR_CONDITIONS = [
     englishName: "Terrified",
     pageId: "RuFearTerrified1",
     icon: `modules/${MODULE_ID}/assets/conditions/fear/terrified.svg`,
-    contextNote: "-[[4]] (штраф) против эффектов Ужаса",
     mechanics: { changes: STANDARD_FEAR_CHANGES }
   },
   {
@@ -91,19 +88,9 @@ const FEAR_CONDITIONS = [
     englishName: "Horrified",
     pageId: "RuFearHorrified1",
     icon: `modules/${MODULE_ID}/assets/conditions/fear/horrified.svg`,
-    contextNote: "-[[4]] (штраф) против эффектов Ужаса",
     mechanics: {
       changes: [
-        ...STANDARD_FEAR_CHANGES,
-        { formula: -2, operator: "add", subTarget: "ac", modifier: "penalty", priority: 0 },
-        {
-          formula: 0,
-          operator: "set",
-          subTarget: "dex",
-          modifier: "untypedPerm",
-          priority: 1001,
-          continuous: true
-        }
+        { formula: -2, operator: "add", subTarget: "ac", modifier: "penalty", priority: 0 }
       ],
       flags: ["loseDexToAC"]
     }
@@ -1664,34 +1651,13 @@ function renderFearContextNoteInRollTooltip(message, root) {
   tooltip.append(note);
 }
 
-function renderFearContextNoteInWillSheetTooltip(app, root) {
+function renderFearContextNoteInWillSheetTooltip(_app, root) {
   if (!(root instanceof HTMLElement)) return;
-  const actor = app?.actor
-    ?? (app?.object?.documentName === "Actor" ? app.object : null)
-    ?? (app?.document?.documentName === "Actor" ? app.document : null);
-  const activeFearContext = fearRulesEnabled() ? getActiveFearContextEntry(actor) : null;
-
-  for (const tooltip of root.querySelectorAll(
-    '.saving-throw[data-savingthrow="will"] > .tooltipcontent'
-  )) {
-    tooltip.querySelectorAll(".pf1e-ru-fear-will-note").forEach((element) => element.remove());
-    if (!activeFearContext) continue;
-    const alreadyRendered = Array.from(tooltip.querySelectorAll(".tooltipcontent-context"))
-      .some((element) => /против эффектов Ужаса/i.test(element.textContent ?? ""));
-    if (alreadyRendered) continue;
-
-    const formattedNote = actor.formatContextNotes?.(
-      [{ notes: [activeFearContext.contextNote], item: activeFearContext.item }],
-      actor.getRollData?.()
-    )?.[0] ?? activeFearContext.contextNote;
-    const heading = document.createElement("span");
-    heading.className = "span3 pf1e-ru-fear-will-note";
-    heading.innerHTML = "<br>Заметки";
-    const note = document.createElement("span");
-    note.className = "tooltipcontent-context pf1e-ru-fear-will-note";
-    note.innerHTML = formattedNote;
-    tooltip.append(heading, note);
-  }
+  // Ранее модуль добавлял примечание ужаса внутрь системной подсказки Воли.
+  // Стили PF1 делали этот текст белым, и после раскрытия он оставался виден
+  // поверх светлого листа. Само примечание уже выводится в карточке броска,
+  // поэтому здесь достаточно удалить старую визуальную вставку.
+  root.querySelectorAll(".pf1e-ru-fear-will-note").forEach((element) => element.remove());
 }
 
 function prepareRussianSkillRoll(actor, rollOptions, skillId) {
