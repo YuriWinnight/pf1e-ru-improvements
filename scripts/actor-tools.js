@@ -7,6 +7,9 @@ const UNKNOWN_ICON_MIGRATION_VERSION = 2;
 const CURSE_FLAG = "curse";
 const CURSE_SOUND_SETTING = "curseRevealSound";
 const CURSE_SOUND_VOLUME_SETTING = "curseRevealSoundVolume";
+const SOCKET_NAME = `module.${MODULE_ID}`;
+const SOCKET_ACTION_CURSE_FAILURE = "createCurseFailureWhisper";
+const SOCKET_ACTION_CURSE_SOUND = "playCurseRevealSound";
 const ACTOR_TYPES = new Set(["character", "npc"]);
 const IDENTIFIABLE_ITEM_TYPES = new Set(["consumable", "container", "equipment", "loot", "spell", "weapon"]);
 const UNKNOWN_ICON_ROOT = `modules/${MODULE_ID}/assets/unidentified`;
@@ -490,8 +493,23 @@ function dialogPromise({ title, content, buttons, defaultButton = "ok" }) {
   });
 }
 
-async function whisperFailedCurseIdentification(actor, item, roll, curseIdentifyDC) {
-  const recipients = ChatMessage.getWhisperRecipients("GM").map((user) => user.id);
+function getPrivilegedUsers() {
+  return game.users.filter((user) => Number(user.role) >= CONST.USER_ROLES.ASSISTANT);
+}
+
+function getActivePrivilegedDispatcher() {
+  const activeGM = game.users.activeGM;
+  if (activeGM) return activeGM;
+  return getPrivilegedUsers()
+    .filter((user) => user.active)
+    .sort((left, right) => left.id.localeCompare(right.id))[0] ?? null;
+}
+
+async function createFailedCurseIdentificationWhisper(payload) {
+  const actor = await fromUuid(payload?.actorUuid).catch(() => null);
+  const item = actor?.items?.get(payload?.itemId);
+  if (!actor || !item) return;
+  const recipients = getPrivilegedUsers().map((user) => user.id);
   if (!recipients.length) return;
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
@@ -499,21 +517,41 @@ async function whisperFailedCurseIdentification(actor, item, roll, curseIdentify
     content: `<section class="pf1e-ru-curse-whisper">
       <h4><i class="fas fa-user-secret"></i> Неопознанное проклятие</h4>
       <p><b>${escapeHTML(actor.name)}</b> опознал предмет <b>${escapeHTML(item.name)}</b>, но не распознал его проклятие.</p>
-      <p>Результат: <b>${toNumber(roll.total, 0)}</b>; СЛ проклятия: <b>${curseIdentifyDC}</b>.</p>
+      <p>Результат: <b>${toNumber(payload.rollTotal, 0)}</b>; СЛ проклятия: <b>${toNumber(payload.curseIdentifyDC, 0)}</b>.</p>
     </section>`,
     flags: {
       [MODULE_ID]: {
         curseIdentificationSecret: true,
         actorUuid: actor.uuid,
         itemUuid: item.uuid,
-        curseIdentifyDC,
-        rollTotal: toNumber(roll.total, 0)
+        curseIdentifyDC: toNumber(payload.curseIdentifyDC, 0),
+        rollTotal: toNumber(payload.rollTotal, 0)
       }
     }
   });
 }
 
-function playCurseRevealSound() {
+async function whisperFailedCurseIdentification(actor, item, roll, curseIdentifyDC) {
+  const dispatcher = getActivePrivilegedDispatcher();
+  if (!dispatcher) {
+    console.warn(`${MODULE_ID} | Не удалось отправить скрытое сообщение: ведущий или помощник ведущего не подключён.`);
+    return;
+  }
+  const request = {
+    action: SOCKET_ACTION_CURSE_FAILURE,
+    requestingUserId: game.user.id,
+    payload: {
+      actorUuid: actor.uuid,
+      itemId: item.id,
+      curseIdentifyDC,
+      rollTotal: toNumber(roll.total, 0)
+    }
+  };
+  if (dispatcher.id === game.user.id) return createFailedCurseIdentificationWhisper(request.payload);
+  game.socket.emit(SOCKET_NAME, request);
+}
+
+function playLocalCurseRevealSound() {
   if (!game.settings.get(MODULE_ID, CURSE_SOUND_SETTING)) return;
   const volume = Math.max(0, Math.min(1, toNumber(game.settings.get(MODULE_ID, CURSE_SOUND_VOLUME_SETTING), 0.3)));
   if (!volume) return;
@@ -526,6 +564,31 @@ function playCurseRevealSound() {
   } catch (error) {
     console.warn(`${MODULE_ID} | Не удалось воспроизвести звук раскрытого проклятия.`, error);
   }
+}
+
+function playCurseRevealSound() {
+  playLocalCurseRevealSound();
+  game.socket.emit(SOCKET_NAME, {
+    action: SOCKET_ACTION_CURSE_SOUND,
+    requestingUserId: game.user.id
+  });
+}
+
+async function handleModuleSocket(request) {
+  if (!request || request.requestingUserId === game.user.id) return;
+  if (request.action === SOCKET_ACTION_CURSE_SOUND) {
+    playLocalCurseRevealSound();
+    return;
+  }
+  if (request.action !== SOCKET_ACTION_CURSE_FAILURE) return;
+  const dispatcher = getActivePrivilegedDispatcher();
+  if (!dispatcher || dispatcher.id !== game.user.id) return;
+  const requestingUser = game.users.get(request.requestingUserId);
+  const actor = await fromUuid(request.payload?.actorUuid).catch(() => null);
+  const canRequest = requestingUser && actor && (Number(requestingUser.role) >= CONST.USER_ROLES.ASSISTANT
+    || actor.testUserPermission?.(requestingUser, "OWNER"));
+  if (!canRequest) return;
+  await createFailedCurseIdentificationWhisper(request.payload);
 }
 
 class PF1ERUActorIdentificationApp extends Application {
@@ -956,7 +1019,7 @@ async function resolveFastHealingActor(data) {
 
 async function applyFastHealingFromMessage(message, button = null) {
   const data = message?.getFlag?.(MODULE_ID, "fastHealing") ?? gprop(message, `flags.${MODULE_ID}.fastHealing`);
-  if (!data || data.applied || data.cancelled) return;
+  if (!data || data.applied) return;
   const actor = await resolveFastHealingActor(data);
   if (!actor || !canManageActor(actor)) return ui.notifications.warn("Недостаточно прав для восстановления ПЗ этого персонажа.");
   const amount = Math.max(0, Math.floor(toNumber(data.amount, 0)));
@@ -993,7 +1056,10 @@ async function undoFastHealingFromMessage(message) {
   await actor.update({ "system.attributes.hp.value": next }, { diff: true });
   await message.update({
     [`flags.${MODULE_ID}.fastHealing.applied`]: false,
-    [`flags.${MODULE_ID}.fastHealing.cancelled`]: true
+    [`flags.${MODULE_ID}.fastHealing.cancelled`]: false,
+    [`flags.${MODULE_ID}.fastHealing.restored`]: 0,
+    [`flags.${MODULE_ID}.fastHealing.hpBefore`]: next,
+    [`flags.${MODULE_ID}.fastHealing.hpAfter`]: next
   });
   ui.notifications.info(`${actor.name}: применение быстрого лечения отменено.`);
 }
@@ -1125,6 +1191,11 @@ Hooks.once("init", () => {
 });
 
 Hooks.once("ready", async () => {
+  game.socket.on(SOCKET_NAME, (request) => {
+    void handleModuleSocket(request).catch((error) => {
+      console.error(`${MODULE_ID} | Ошибка обработки сетевого события.`, error);
+    });
+  });
   await migrateExistingUnknownItemIcons().catch((error) => {
     console.error(`${MODULE_ID} | Не удалось назначить изображения неопознанным предметам.`, error);
   });
@@ -1170,11 +1241,10 @@ Hooks.on("renderChatMessage", (message, html) => {
     button.classList.add("is-applied");
     button.disabled = true;
     button.innerHTML = '<i class="fas fa-check"></i> Быстрое лечение применено';
-  } else if (data.cancelled) {
-    button.classList.add("is-cancelled");
-    button.disabled = true;
-    button.innerHTML = '<i class="fas fa-ban"></i> Быстрое лечение отменено';
   } else {
+    button.classList.remove("is-applied", "is-cancelled");
+    button.disabled = false;
+    button.innerHTML = `<i class="fas fa-plus"></i> Восстановить ${Math.max(0, Math.floor(toNumber(data.amount, 0)))} ПЗ`;
     button.addEventListener("click", () => applyFastHealingFromMessage(message, button));
   }
 });

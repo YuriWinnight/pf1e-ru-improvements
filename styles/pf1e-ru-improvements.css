@@ -578,23 +578,25 @@
 
 .pf1e-ru-identification-section > h2 {
   margin: 0;
-  padding: 0.4rem 0.5rem;
+  padding: 0.38rem 0.5rem;
   background: #796653;
+  background-image: none;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 8%),
+    0 0 0 1px rgb(0 0 0 / 8%);
   color: #fff;
-  font-size: 0.9rem;
-  line-height: 1;
+  font: 700 0.86rem/1 var(--sans-serif);
 }
 
 .pf1e-ru-identification-table {
   border: 1px solid rgb(83 69 57 / 48%);
-  border-top: 0;
 }
 
 .pf1e-ru-identification-row {
   display: grid;
-  grid-template-columns: minmax(14rem, 2fr) minmax(8rem, 1.15fr) 3.2rem 3.2rem 2.5rem;
+  grid-template-columns: minmax(15rem, 2fr) minmax(9rem, 1.2fr) 3.5rem 6.5rem 5.25rem;
   align-items: center;
-  min-height: 2.45rem;
+  min-height: 2.25rem;
   border-bottom: 1px solid rgb(83 69 57 / 22%);
 }
 
@@ -603,8 +605,13 @@
 }
 
 .pf1e-ru-identification-row > span {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
   padding: 0.25rem 0.4rem;
+  border-left: 1px solid rgb(83 69 57 / 28%);
   overflow: hidden;
   text-align: center;
   text-overflow: ellipsis;
@@ -614,17 +621,26 @@
 .pf1e-ru-identification-head {
   min-height: 1.75rem;
   background: rgb(121 102 83 / 18%);
-  font-size: 0.72rem;
-  font-weight: 700;
+  font: 700 0.72rem/1 var(--sans-serif);
+}
+
+.pf1e-ru-identification-head > span:first-child {
+  border-left: 0;
+}
+
+.pf1e-ru-identification-row:not(.pf1e-ru-identification-head) > span:nth-child(2) {
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .pf1e-ru-identification-item {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
   min-width: 0;
   width: 100%;
-  height: 2.4rem;
+  min-height: 2.25rem;
+  height: auto;
   margin: 0;
   padding: 0.2rem 0.4rem;
   border: 0;
@@ -657,16 +673,18 @@
 
 .pf1e-ru-identification-toggle {
   width: 2rem;
-  height: 1.7rem;
-  margin: auto;
+  height: 1.65rem;
+  margin: 0;
+  padding: 0;
+}
+
+.pf1e-ru-identification-row > .pf1e-ru-identification-action {
+  justify-content: center;
   padding: 0;
 }
 
 .pf1e-ru-identification-empty {
-  margin: 0;
-  padding: 0.8rem;
-  border: 1px solid rgb(83 69 57 / 32%);
-  border-top: 0;
+  padding: 0.75rem;
   color: #746b63;
   font-style: italic;
 }
@@ -735,7 +753,7 @@
   }
 
   .pf1e-ru-identification-row {
-    grid-template-columns: minmax(11rem, 2fr) minmax(6rem, 1fr) 2.8rem 2.8rem 2.2rem;
+    grid-template-columns: minmax(11rem, 2fr) minmax(6rem, 1fr) 2.8rem 5rem 2.2rem;
   }
 }
 
@@ -756,10 +774,6 @@
   padding: 0 0.55rem;
   line-height: 1;
   white-space: nowrap;
-}
-
-.pf1e-ru-identification-table.show-curse-details .pf1e-ru-identification-row {
-  grid-template-columns: minmax(13rem, 2fr) minmax(7rem, 1.1fr) 3rem 3.2rem 5rem 2.5rem;
 }
 
 .pf1e-ru-identification-item > span {
@@ -875,10 +889,4 @@
 #chat-log .pf1e-ru-curse-whisper h4,
 #chat-log .pf1e-ru-curse-whisper p {
   margin: 0.18rem 0;
-}
-
-@media (max-width: 720px) {
-  .pf1e-ru-identification-table.show-curse-details .pf1e-ru-identification-row {
-    grid-template-columns: minmax(10rem, 2fr) minmax(5.5rem, 1fr) 2.7rem 2.8rem 4.2rem 2.2rem;
-  }
 }

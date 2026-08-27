@@ -14,55 +14,53 @@
 
   <section class="pf1e-ru-identification-section">
     <h2>Неопознанные предметы</h2>
-    {{#if unidentified.length}}
-    <div class="pf1e-ru-identification-table {{#if showCurseDetails}}show-curse-details{{/if}}">
+    <div class="pf1e-ru-identification-table">
       <div class="pf1e-ru-identification-row pf1e-ru-identification-head">
-        <span>Предмет</span><span>Аура</span><span>УЗ</span><span>СЛ</span>{{#if showCurseDetails}}<span>СЛ проклятия</span>{{/if}}<span></span>
+        <span>Предмет</span><span>Аура</span><span>УЗ</span><span>СЛ Опознания</span><span>Опознание</span>
       </div>
+      {{#if unidentified.length}}
       {{#each unidentified}}
       <div class="pf1e-ru-identification-row" data-item-id="{{id}}">
         <button type="button" class="pf1e-ru-identification-item" data-action="open-item" data-item-id="{{id}}" title="Открыть предмет">
           <img src="{{img}}" alt=""><span>{{name}}{{#if ../showCurseDetails}}{{#if cursed}}<small class="pf1e-ru-cursed-item-label"><i class="fas fa-skull"></i> Проклято</small>{{/if}}{{/if}}</span>
         </button>
         <span>{{aura}}</span><span>{{casterLevel}}</span><span>{{identifyDC}}</span>
-        {{#if ../showCurseDetails}}<span>{{curseIdentifyDC}}</span>{{/if}}
+        <span class="pf1e-ru-identification-action">
         {{#if ../canToggle}}
         <button type="button" class="pf1e-ru-identification-toggle" data-action="toggle-identification" data-item-id="{{id}}" title="Опознать без проверки"><i class="fas fa-eye"></i></button>
-        {{else}}
-        <span></span>
         {{/if}}
+        </span>
       </div>
       {{/each}}
+      {{else}}
+      <div class="pf1e-ru-identification-empty">Неопознанных магических предметов нет.</div>
+      {{/if}}
     </div>
-    {{else}}
-    <p class="pf1e-ru-identification-empty">Неопознанных магических предметов нет.</p>
-    {{/if}}
   </section>
 
   <section class="pf1e-ru-identification-section">
     <h2>Опознанные предметы</h2>
-    {{#if identified.length}}
-    <div class="pf1e-ru-identification-table {{#if showCurseDetails}}show-curse-details{{/if}}">
+    <div class="pf1e-ru-identification-table">
       <div class="pf1e-ru-identification-row pf1e-ru-identification-head">
-        <span>Предмет</span><span>Аура</span><span>УЗ</span><span>СЛ</span>{{#if showCurseDetails}}<span>СЛ проклятия</span>{{/if}}<span></span>
+        <span>Предмет</span><span>Аура</span><span>УЗ</span><span>СЛ Опознания</span><span>Опознание</span>
       </div>
+      {{#if identified.length}}
       {{#each identified}}
       <div class="pf1e-ru-identification-row" data-item-id="{{id}}">
         <button type="button" class="pf1e-ru-identification-item" data-action="open-item" data-item-id="{{id}}" title="Открыть предмет">
           <img src="{{img}}" alt=""><span>{{name}}{{#if ../showCurseDetails}}{{#if cursed}}<small class="pf1e-ru-cursed-item-label"><i class="fas fa-skull"></i> Проклято{{#if curseIdentified}} — опознано{{else}} — скрыто{{/if}}</small>{{/if}}{{/if}}</span>
         </button>
         <span>{{aura}}</span><span>{{casterLevel}}</span><span>{{identifyDC}}</span>
-        {{#if ../showCurseDetails}}<span>{{curseIdentifyDC}}</span>{{/if}}
+        <span class="pf1e-ru-identification-action">
         {{#if ../canToggle}}
         <button type="button" class="pf1e-ru-identification-toggle" data-action="toggle-identification" data-item-id="{{id}}" title="Сделать неопознанным"><i class="fas fa-eye-slash"></i></button>
-        {{else}}
-        <span></span>
         {{/if}}
+        </span>
       </div>
       {{/each}}
+      {{else}}
+      <div class="pf1e-ru-identification-empty">Опознанных магических предметов нет.</div>
+      {{/if}}
     </div>
-    {{else}}
-    <p class="pf1e-ru-identification-empty">Опознанных магических предметов нет.</p>
-    {{/if}}
   </section>
 </section>
