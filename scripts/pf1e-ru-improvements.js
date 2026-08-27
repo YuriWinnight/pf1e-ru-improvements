@@ -141,7 +141,7 @@ function createAthleticsSkillData() {
     mod: 0,
     rt: false,
     cs: false,
-    acp: true,
+    acp: false,
     background: false,
     custom: true
   };
@@ -156,13 +156,13 @@ function isActiveGM() {
 function actorNeedsAthletics(actor) {
   if (!actor || !ATHLETICS_ACTOR_TYPES.has(actor.type)) return false;
   const skill = actor.system?.skills?.[ATHLETICS_SKILL_ID];
-  return !skill || skill.acp !== true;
+  return !skill || skill.acp !== false;
 }
 
 function athleticsUpdateForActor(actor) {
   const skill = actor.system?.skills?.[ATHLETICS_SKILL_ID];
   return skill
-    ? { [`system.skills.${ATHLETICS_SKILL_ID}.acp`]: true }
+    ? { [`system.skills.${ATHLETICS_SKILL_ID}.acp`]: false }
     : { [`system.skills.${ATHLETICS_SKILL_ID}`]: createAthleticsSkillData() };
 }
 
@@ -202,10 +202,10 @@ async function updateExistingAthleticsArmorPenalty() {
   const updates = game.actors
     .filter((actor) => ATHLETICS_ACTOR_TYPES.has(actor.type)
       && actor.system?.skills?.[ATHLETICS_SKILL_ID]
-      && actor.system.skills[ATHLETICS_SKILL_ID].acp !== true)
+      && actor.system.skills[ATHLETICS_SKILL_ID].acp !== false)
     .map((actor) => ({
       _id: actor.id,
-      [`system.skills.${ATHLETICS_SKILL_ID}.acp`]: true
+      [`system.skills.${ATHLETICS_SKILL_ID}.acp`]: false
     }));
   if (updates.length) await Actor.updateDocuments(updates);
   return updates.length;

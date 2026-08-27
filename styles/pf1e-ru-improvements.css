@@ -528,3 +528,357 @@
 #chat-log .dice-tooltip > .pf1e-ru-fear-tooltip-note strong {
   color: #ddd;
 }
+
+/* 1.5.3: actor/NPC identification and fast-healing tools. */
+.pf1e-ru-actor-identification .window-content {
+  padding: 0.55rem;
+  overflow: auto;
+}
+
+.pf1e-ru-identification-root {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.pf1e-ru-identification-actor {
+  display: grid;
+  grid-template-columns: 3.2rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem;
+  border: 1px solid rgb(83 69 57 / 45%);
+  background: rgb(255 255 255 / 18%);
+}
+
+.pf1e-ru-identification-actor > img {
+  width: 3.2rem;
+  height: 3.2rem;
+  border: 0;
+  object-fit: contain;
+}
+
+.pf1e-ru-identification-actor h2,
+.pf1e-ru-identification-actor p {
+  margin: 0;
+}
+
+.pf1e-ru-identification-actor p {
+  margin-top: 0.2rem;
+  color: #665b52;
+  font-size: 0.78rem;
+}
+
+.pf1e-ru-identification-actor > button {
+  width: auto;
+  min-width: 10.5rem;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.pf1e-ru-identification-section > h2 {
+  margin: 0;
+  padding: 0.4rem 0.5rem;
+  background: #796653;
+  color: #fff;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.pf1e-ru-identification-table {
+  border: 1px solid rgb(83 69 57 / 48%);
+  border-top: 0;
+}
+
+.pf1e-ru-identification-row {
+  display: grid;
+  grid-template-columns: minmax(14rem, 2fr) minmax(8rem, 1.15fr) 3.2rem 3.2rem 2.5rem;
+  align-items: center;
+  min-height: 2.45rem;
+  border-bottom: 1px solid rgb(83 69 57 / 22%);
+}
+
+.pf1e-ru-identification-row:last-child {
+  border-bottom: 0;
+}
+
+.pf1e-ru-identification-row > span {
+  min-width: 0;
+  padding: 0.25rem 0.4rem;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf1e-ru-identification-head {
+  min-height: 1.75rem;
+  background: rgb(121 102 83 / 18%);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.pf1e-ru-identification-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  width: 100%;
+  height: 2.4rem;
+  margin: 0;
+  padding: 0.2rem 0.4rem;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  text-align: left;
+}
+
+.pf1e-ru-identification-item:hover,
+.pf1e-ru-identification-item:focus {
+  background: rgb(121 102 83 / 12%);
+  box-shadow: none;
+}
+
+.pf1e-ru-identification-item img {
+  flex: 0 0 2rem;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  object-fit: contain;
+}
+
+.pf1e-ru-identification-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf1e-ru-identification-toggle {
+  width: 2rem;
+  height: 1.7rem;
+  margin: auto;
+  padding: 0;
+}
+
+.pf1e-ru-identification-empty {
+  margin: 0;
+  padding: 0.8rem;
+  border: 1px solid rgb(83 69 57 / 32%);
+  border-top: 0;
+  color: #746b63;
+  font-style: italic;
+}
+
+.pf1e-ru-identification-choice-list {
+  display: grid;
+  gap: 0.25rem;
+  max-height: 24rem;
+  overflow-y: auto;
+}
+
+.pf1e-ru-identification-choice {
+  display: grid;
+  grid-template-columns: 1.25rem 2rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.35rem;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid rgb(83 69 57 / 25%);
+}
+
+.pf1e-ru-identification-choice img {
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  object-fit: contain;
+}
+
+#chat-log .pf1e-ru-fast-healing-chat {
+  display: grid;
+  gap: 0.4rem;
+}
+
+#chat-log .pf1e-ru-fast-healing-chat h3,
+#chat-log .pf1e-ru-fast-healing-chat p {
+  margin: 0;
+}
+
+#chat-log .pf1e-ru-fast-healing-chat button.is-applied,
+#chat-log .pf1e-ru-fast-healing-chat button.is-cancelled {
+  cursor: default;
+  opacity: 0.78;
+}
+
+#chat-log .pf1e-ru-identification-chat-result h4,
+#chat-log .pf1e-ru-identification-chat-result p {
+  margin: 0.15rem 0;
+}
+
+#chat-log .pf1e-ru-identification-chat-result.success > p:last-child {
+  color: #246324;
+}
+
+#chat-log .pf1e-ru-identification-chat-result.failure > p:last-child {
+  color: #7b1f1f;
+}
+
+@media (max-width: 720px) {
+  .pf1e-ru-identification-actor {
+    grid-template-columns: 3rem minmax(0, 1fr);
+  }
+
+  .pf1e-ru-identification-actor > button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .pf1e-ru-identification-row {
+    grid-template-columns: minmax(11rem, 2fr) minmax(6rem, 1fr) 2.8rem 2.8rem 2.2rem;
+  }
+}
+
+/* 1.5.4: inventory identification button and cursed-item workflow. */
+.pf1.sheet.actor .pf1e-ru-inventory-identification-button,
+.pf1alt.sheet.actor .pf1e-ru-inventory-identification-button,
+.pf1e-pg-alt-sheet.sheet.actor .pf1e-ru-inventory-identification-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  gap: 0.3rem;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 10.8rem;
+  height: 1.75rem;
+  margin: 0 0.35rem;
+  padding: 0 0.55rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.pf1e-ru-identification-table.show-curse-details .pf1e-ru-identification-row {
+  grid-template-columns: minmax(13rem, 2fr) minmax(7rem, 1.1fr) 3rem 3.2rem 5rem 2.5rem;
+}
+
+.pf1e-ru-identification-item > span {
+  display: flex;
+  flex-direction: column;
+}
+
+.pf1e-ru-cursed-item-label {
+  color: #7a1e27;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.pf1e-ru-curse-aura-controls {
+  border: 0;
+}
+
+.pf1e-ru-curse-aura-controls .form-group {
+  display: flex;
+  align-items: center;
+  min-height: 1.55rem;
+}
+
+.pf1e-ru-curse-identify-dc-row {
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0;
+}
+
+.pf1e-ru-curse-identify-dc-row > label {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  margin: 0 !important;
+}
+
+.pf1e-ru-curse-identify-dc-row > .pf1e-ru-curse-dc {
+  margin-left: 5rem !important;
+}
+
+.pf1e-ru-curse-checkbox {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  color: #6f2028;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pf1e-ru-curse-checkbox input[type="checkbox"] {
+  align-self: center;
+  margin: 0 5px 0 0 !important;
+}
+
+.pf1e-ru-curse-checkbox > span {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.pf1e-ru-curse-identified-label {
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  white-space: nowrap;
+}
+
+.pf1e-ru-curse-dc {
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  white-space: nowrap;
+}
+
+.pf1e-ru-curse-dc.is-hidden {
+  display: none;
+}
+
+.pf1e-ru-curse-identified-label {
+  margin-left: 0;
+}
+
+.pf1e-ru-curse-description {
+  min-width: 0;
+  min-height: 12rem;
+  padding: 0.45rem;
+  overflow: hidden auto;
+}
+
+.pf1e-ru-curse-editor {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 12rem;
+}
+
+.pf1e-ru-curse-editor > .editor-edit {
+  display: block;
+  opacity: 1;
+  z-index: 2;
+}
+
+.pf1e-ru-curse-description-player {
+  line-height: 1.35;
+}
+
+#chat-log .pf1e-ru-curse-revealed,
+#chat-log .pf1e-ru-curse-whisper h4 {
+  color: #741d2a;
+}
+
+#chat-log .pf1e-ru-curse-whisper h4,
+#chat-log .pf1e-ru-curse-whisper p {
+  margin: 0.18rem 0;
+}
+
+@media (max-width: 720px) {
+  .pf1e-ru-identification-table.show-curse-details .pf1e-ru-identification-row {
+    grid-template-columns: minmax(10rem, 2fr) minmax(5.5rem, 1fr) 2.7rem 2.8rem 4.2rem 2.2rem;
+  }
+}
