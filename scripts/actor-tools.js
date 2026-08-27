@@ -4,12 +4,12 @@ const UNKNOWN_ICON_FLAG = "unidentifiedIcon";
 const UNKNOWN_ICON_SETTING = "replaceUnidentifiedItemIcons";
 const UNKNOWN_ICON_MIGRATION_SETTING = "unidentifiedIconMigration";
 const UNKNOWN_ICON_MIGRATION_VERSION = 2;
+const HIDE_IDENTIFY_DC_SETTING = "hideIdentifyDCFromPlayers";
 const CURSE_FLAG = "curse";
 const CURSE_SOUND_SETTING = "curseRevealSound";
 const CURSE_SOUND_VOLUME_SETTING = "curseRevealSoundVolume";
 const SOCKET_NAME = `module.${MODULE_ID}`;
 const SOCKET_ACTION_CURSE_FAILURE = "createCurseFailureWhisper";
-const SOCKET_ACTION_CURSE_SOUND = "playCurseRevealSound";
 const ACTOR_TYPES = new Set(["character", "npc"]);
 const IDENTIFIABLE_ITEM_TYPES = new Set(["consumable", "container", "equipment", "loot", "spell", "weapon"]);
 const UNKNOWN_ICON_ROOT = `modules/${MODULE_ID}/assets/unidentified`;
@@ -105,6 +105,10 @@ function isIdentifiableItem(item) {
 
 function isItemIdentified(item) {
   return gprop(item, "system.identified") !== false;
+}
+
+function shouldHideIdentifyDC() {
+  return !game.user.isGM && game.settings.get(MODULE_ID, HIDE_IDENTIFY_DC_SETTING) !== false;
 }
 
 function getCurseData(item) {
@@ -474,6 +478,31 @@ function getSpellcraftBonus(actor) {
   return toNumber(bonus, 0);
 }
 
+function getRollFromChatResult(result) {
+  if (!result) return null;
+  if (result instanceof Roll) return result;
+  const rolls = Array.isArray(result.rolls) ? result.rolls : [];
+  return rolls[0] ?? result.roll ?? result._roll ?? null;
+}
+
+function getChatMessageFromRollResult(result) {
+  if (!result) return null;
+  if (result.documentName === "ChatMessage" || result.constructor?.documentName === "ChatMessage") return result;
+  if (result.id && game.messages?.get(result.id)) return game.messages.get(result.id);
+  return null;
+}
+
+async function performNativeSpellcraftCheck(actor, { skipDialog = false, rollMode = null } = {}) {
+  if (!actor || typeof actor.rollSkill !== "function") return null;
+  const options = { event: null, skipDialog };
+  if (rollMode) options.rollMode = rollMode;
+  const result = await actor.rollSkill("spl", options);
+  if (!result) return null;
+  const message = getChatMessageFromRollResult(result);
+  const roll = getRollFromChatResult(result) ?? getRollFromChatResult(message);
+  return { message, roll, total: toNumber(roll?.total, Number.NaN) };
+}
+
 function dialogPromise({ title, content, buttons, defaultButton = "ok" }) {
   return new Promise((resolve) => {
     const wrappedButtons = {};
@@ -493,14 +522,14 @@ function dialogPromise({ title, content, buttons, defaultButton = "ok" }) {
   });
 }
 
-function getPrivilegedUsers() {
-  return game.users.filter((user) => Number(user.role) >= CONST.USER_ROLES.ASSISTANT);
+function getGameMasters() {
+  return game.users.filter((user) => Number(user.role) === CONST.USER_ROLES.GAMEMASTER);
 }
 
-function getActivePrivilegedDispatcher() {
+function getActiveGMDispatcher() {
   const activeGM = game.users.activeGM;
   if (activeGM) return activeGM;
-  return getPrivilegedUsers()
+  return getGameMasters()
     .filter((user) => user.active)
     .sort((left, right) => left.id.localeCompare(right.id))[0] ?? null;
 }
@@ -509,11 +538,14 @@ async function createFailedCurseIdentificationWhisper(payload) {
   const actor = await fromUuid(payload?.actorUuid).catch(() => null);
   const item = actor?.items?.get(payload?.itemId);
   if (!actor || !item) return;
-  const recipients = getPrivilegedUsers().map((user) => user.id);
+  if (!game.user.isGM) return;
+  const recipients = getGameMasters().map((user) => user.id);
   if (!recipients.length) return;
   await ChatMessage.create({
-    speaker: ChatMessage.getSpeaker({ actor }),
+    user: game.user.id,
+    speaker: { alias: "Опознание предметов" },
     whisper: recipients,
+    blind: true,
     content: `<section class="pf1e-ru-curse-whisper">
       <h4><i class="fas fa-user-secret"></i> Неопознанное проклятие</h4>
       <p><b>${escapeHTML(actor.name)}</b> опознал предмет <b>${escapeHTML(item.name)}</b>, но не распознал его проклятие.</p>
@@ -532,9 +564,9 @@ async function createFailedCurseIdentificationWhisper(payload) {
 }
 
 async function whisperFailedCurseIdentification(actor, item, roll, curseIdentifyDC) {
-  const dispatcher = getActivePrivilegedDispatcher();
+  const dispatcher = getActiveGMDispatcher();
   if (!dispatcher) {
-    console.warn(`${MODULE_ID} | Не удалось отправить скрытое сообщение: ведущий или помощник ведущего не подключён.`);
+    console.warn(`${MODULE_ID} | Не удалось отправить скрытое сообщение: игровой мастер не подключён.`);
     return;
   }
   const request = {
@@ -551,13 +583,15 @@ async function whisperFailedCurseIdentification(actor, item, roll, curseIdentify
   game.socket.emit(SOCKET_NAME, request);
 }
 
-function playLocalCurseRevealSound() {
+function playCurseRevealSound() {
   if (!game.settings.get(MODULE_ID, CURSE_SOUND_SETTING)) return;
   const volume = Math.max(0, Math.min(1, toNumber(game.settings.get(MODULE_ID, CURSE_SOUND_VOLUME_SETTING), 0.3)));
   if (!volume) return;
   const source = `modules/${MODULE_ID}/assets/audio/curse-reveal.mp3`;
   try {
-    const playback = AudioHelper.play({ src: source, volume, autoplay: true, loop: false }, false);
+    // Штатная push-рассылка Foundry воспроизводит один и тот же звук на всех
+    // подключённых клиентах и не требует установленного обработчика сокета модуля.
+    const playback = AudioHelper.play({ src: source, volume, autoplay: true, loop: false }, true);
     if (playback?.catch) playback.catch((error) => {
       console.warn(`${MODULE_ID} | Не удалось воспроизвести звук раскрытого проклятия.`, error);
     });
@@ -566,26 +600,14 @@ function playLocalCurseRevealSound() {
   }
 }
 
-function playCurseRevealSound() {
-  playLocalCurseRevealSound();
-  game.socket.emit(SOCKET_NAME, {
-    action: SOCKET_ACTION_CURSE_SOUND,
-    requestingUserId: game.user.id
-  });
-}
-
 async function handleModuleSocket(request) {
   if (!request || request.requestingUserId === game.user.id) return;
-  if (request.action === SOCKET_ACTION_CURSE_SOUND) {
-    playLocalCurseRevealSound();
-    return;
-  }
   if (request.action !== SOCKET_ACTION_CURSE_FAILURE) return;
-  const dispatcher = getActivePrivilegedDispatcher();
+  const dispatcher = getActiveGMDispatcher();
   if (!dispatcher || dispatcher.id !== game.user.id) return;
   const requestingUser = game.users.get(request.requestingUserId);
   const actor = await fromUuid(request.payload?.actorUuid).catch(() => null);
-  const canRequest = requestingUser && actor && (Number(requestingUser.role) >= CONST.USER_ROLES.ASSISTANT
+  const canRequest = requestingUser && actor && (requestingUser.isGM
     || actor.testUserPermission?.(requestingUser, "OWNER"));
   if (!canRequest) return;
   await createFailedCurseIdentificationWhisper(request.payload);
@@ -617,6 +639,7 @@ class PF1ERUActorIdentificationApp extends Application {
       canRoll: canManageActor(this.actor) && tables.unidentified.length > 0,
       canToggle: game.user.isGM,
       showCurseDetails: game.user.isGM,
+      showIdentifyDC: !shouldHideIdentifyDC(),
       ...tables
     }, { inplace: false });
   }
@@ -685,38 +708,52 @@ class PF1ERUActorIdentificationApp extends Application {
       if (!targets.length) return ui.notifications.warn("Для опознания не выбран ни один предмет.");
     }
 
-    const bonus = getSpellcraftBonus(this.actor);
-    const formula = bonus >= 0 ? `1d20 + ${bonus}` : `1d20 - ${Math.abs(bonus)}`;
+    const rollMode = game.settings.get("core", "rollMode") || "publicroll";
     let successes = 0;
     for (const entry of targets) {
       const item = this.actor.items.get(entry.id);
       if (!item || isItemIdentified(item)) continue;
-      const roll = await new Roll(formula).roll({ async: true });
-      const success = toNumber(roll.total, 0) >= toNumber(entry.identifyDC, Number.POSITIVE_INFINITY);
+      const nativeResult = await performNativeSpellcraftCheck(this.actor, { skipDialog: false, rollMode });
+      if (!nativeResult?.roll || !Number.isFinite(nativeResult.total)) {
+        ui.notifications.warn(`PF1 не смог выполнить проверку Колдовства для «${entry.name}».`);
+        continue;
+      }
+      const roll = nativeResult.roll;
+      const success = nativeResult.total >= toNumber(entry.identifyDC, Number.POSITIVE_INFINITY);
       const curseSuccess = success && entry.cursed
-        && toNumber(roll.total, 0) >= toNumber(entry.curseIdentifyDC, Number.POSITIVE_INFINITY);
+        && nativeResult.total >= toNumber(entry.curseIdentifyDC, Number.POSITIVE_INFINITY);
       const resultName = success ? item.name || entry.name : entry.name;
-      await roll.toMessage({
-        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-        flavor: `<section class="pf1e-ru-identification-chat-result ${success ? "success" : "failure"}">
+      const flavor = `<section class="pf1e-ru-identification-chat-result ${success ? "success" : "failure"}">
           <h4>Опознание: ${escapeHTML(resultName)}</h4>
           <p>СЛ опознания: <b>${entry.identifyDC}</b></p>
           <p><i class="fas ${success ? "fa-check" : "fa-times"}"></i> <b>${success ? "Успех" : "Провал"}</b></p>
           ${curseSuccess ? '<p class="pf1e-ru-curse-revealed"><i class="fas fa-skull"></i> <b>Предмет проклят!</b></p>' : ""}
-        </section>`,
-        flags: {
-          pf1: { metadata: { rolls: {} } },
-          [MODULE_ID]: {
-            identificationResult: true,
-            actorUuid: this.actor.uuid,
-            itemId: item.id,
-            identifyDC: entry.identifyDC,
-            curseIdentifyDC: entry.cursed ? entry.curseIdentifyDC : null,
-            success,
-            curseSuccess
+        </section>`;
+      const identificationFlags = {
+        identificationResult: true,
+        actorUuid: this.actor.uuid,
+        itemId: item.id,
+        identifyDC: entry.identifyDC,
+        curseIdentifyDC: entry.cursed ? entry.curseIdentifyDC : null,
+        success,
+        curseSuccess
+      };
+      if (nativeResult.message) {
+        await nativeResult.message.update({
+          flavor,
+          [`flags.${MODULE_ID}`]: identificationFlags
+        });
+      } else {
+        await roll.toMessage({
+          speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+          flavor,
+          rollMode,
+          flags: {
+            pf1: { metadata: { rolls: {} } },
+            [MODULE_ID]: identificationFlags
           }
-        }
-      });
+        });
+      }
       if (!success) continue;
       const update = { "system.identified": true };
       if (curseSuccess) update[`flags.${MODULE_ID}.${CURSE_FLAG}.identified`] = true;
@@ -756,6 +793,12 @@ function findAuraIdentifyDCGroup(root) {
     current = current.nextElementSibling;
   }
   return null;
+}
+
+function applyIdentifyDCVisibility(root) {
+  const group = findAuraIdentifyDCGroup(root);
+  if (!group) return;
+  group.classList.toggle("pf1e-ru-player-identify-dc-hidden", shouldHideIdentifyDC());
 }
 
 function injectCurseIdentifyDC(root, item) {
@@ -934,6 +977,7 @@ async function injectItemCurseControls(sheet, html) {
   if (!item || !isIdentifiableItem(item)) return;
   const root = html?.[0] ?? html ?? sheet?.element?.[0];
   if (!root?.querySelector) return;
+  applyIdentifyDCVisibility(root);
   if (game.user.isGM && !root.querySelector(".pf1e-ru-curse-aura-controls")) {
     const identifyDCGroup = injectCurseIdentifyDC(root, item);
     const controls = buildCurseAuraControls(item);
@@ -1151,6 +1195,20 @@ function injectRenderedActorSheetTools(sheet) {
 }
 
 Hooks.once("init", () => {
+  game.settings.register(MODULE_ID, HIDE_IDENTIFY_DC_SETTING, {
+    name: "Скрывать СЛ опознания от игроков",
+    hint: "Скрывать сложность опознания в листах предметов и окне опознания инвентаря. Игровые мастера всегда видят это значение.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true,
+    onChange: () => {
+      if (!game.ready) return;
+      for (const app of Object.values(ui.windows ?? {})) {
+        if (app instanceof PF1ERUActorIdentificationApp || getItemFromSheet(app)) app.render(false);
+      }
+    }
+  });
   game.settings.register(MODULE_ID, UNKNOWN_ICON_SETTING, {
     name: "Изображения неопознанных предметов",
     hint: "Заменять изображения неопознанных предметов подходящими изображениями модуля. При отключении сохранённые исходные изображения будут возвращены.",
@@ -1174,7 +1232,7 @@ Hooks.once("init", () => {
   game.settings.register(MODULE_ID, CURSE_SOUND_SETTING, {
     name: "Звук при раскрытии проклятия",
     hint: "Воспроизводить короткое зловещее сопровождение, когда проверка раскрывает проклятие предмета.",
-    scope: "client",
+    scope: "world",
     config: true,
     type: Boolean,
     default: true
@@ -1182,7 +1240,7 @@ Hooks.once("init", () => {
   game.settings.register(MODULE_ID, CURSE_SOUND_VOLUME_SETTING, {
     name: "Громкость раскрытия проклятия",
     hint: "Громкость звукового сопровождения проклятия.",
-    scope: "client",
+    scope: "world",
     config: true,
     type: Number,
     default: 0.3,

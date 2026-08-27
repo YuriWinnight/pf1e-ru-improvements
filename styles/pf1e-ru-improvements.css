@@ -600,6 +600,14 @@
   border-bottom: 1px solid rgb(83 69 57 / 22%);
 }
 
+.pf1e-ru-identification-dc-hidden .pf1e-ru-identification-row {
+  grid-template-columns: minmax(15rem, 2fr) minmax(9rem, 1.2fr) 3.5rem 5.25rem;
+}
+
+.pf1e-ru-player-identify-dc-hidden {
+  display: none !important;
+}
+
 .pf1e-ru-identification-row:last-child {
   border-bottom: 0;
 }
@@ -754,6 +762,10 @@
 
   .pf1e-ru-identification-row {
     grid-template-columns: minmax(11rem, 2fr) minmax(6rem, 1fr) 2.8rem 5rem 2.2rem;
+  }
+
+  .pf1e-ru-identification-dc-hidden .pf1e-ru-identification-row {
+    grid-template-columns: minmax(11rem, 2fr) minmax(6rem, 1fr) 2.8rem 2.2rem;
   }
 }
 
