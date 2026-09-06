@@ -1019,6 +1019,12 @@ function partyFolderHandlesFastHealing(actor) {
   return false;
 }
 
+function getFastHealingRecipients(actor) {
+  return [...(game.users ?? [])]
+    .filter((user) => user.isGM || actor.testUserPermission?.(user, "OWNER"))
+    .map((user) => user.id);
+}
+
 async function postFastHealingCard(actor, { turnKey = null, automatic = false } = {}) {
   if (!actor || !canManageActor(actor)) return null;
   const amount = getFastHealingAmount(actor);
@@ -1027,6 +1033,7 @@ async function postFastHealingCard(actor, { turnKey = null, automatic = false } 
   const compatibilityRoll = await new Roll("0").roll({ async: true });
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
+    whisper: getFastHealingRecipients(actor),
     content: `<section class="pf1e-ru-fast-healing-chat">
       <h3><i class="fas fa-heartbeat"></i> Быстрое лечение</h3>
       <p><b>${escapeHTML(actor.name)}</b> может восстановить <b>${amount} ПЗ</b>${automatic ? " в свой ход" : ""}.</p>
@@ -1127,31 +1134,6 @@ async function postAutomaticFastHealingReminder(combat) {
   await postFastHealingCard(actor, { turnKey: key, automatic: true });
 }
 
-function injectActorSheetTools(sheet, buttons) {
-  const actor = getActorFromSheet(sheet);
-  if (!isSupportedActor(actor) || isPartyActor(actor) || !canManageActor(actor)) return;
-  const amount = getFastHealingAmount(actor);
-  if (amount && !buttons.some((button) => button.class === "pf1e-ru-fast-healing-tool")) {
-    buttons.unshift({
-      class: "pf1e-ru-fast-healing-tool",
-      label: `Быстрое лечение ${amount}`,
-      icon: "fas fa-heartbeat",
-      onclick: () => postFastHealingCard(actor).catch((error) => console.error(`${MODULE_ID} | Не удалось создать карточку быстрого лечения.`, error))
-    });
-  }
-}
-
-function createActorSheetHeaderLink({ className, label, icon, onClick }) {
-  const link = document.createElement("a");
-  link.className = `header-button ${className}`;
-  link.innerHTML = `<i class="${icon}"></i> ${label}`;
-  link.addEventListener("click", (event) => {
-    event.preventDefault();
-    onClick();
-  });
-  return link;
-}
-
 function injectActorInventoryIdentification(root, actor) {
   const inventory = root?.querySelector?.('.tab.inventory[data-tab="inventory"]');
   if (!inventory) return;
@@ -1173,25 +1155,44 @@ function injectActorInventoryIdentification(root, actor) {
   else toolbar.append(button);
 }
 
+function injectActorFastHealingControl(root, actor) {
+  if (!root?.querySelector) return;
+  root.querySelectorAll(".pf1e-ru-fast-healing-inline").forEach((button) => button.remove());
+  const amount = getFastHealingAmount(actor);
+  if (!amount) return;
+  const input = root.querySelector('input[name="system.traits.fastHealing"]');
+  const container = input?.closest("li.attribute") ?? input?.closest(".form-group");
+  if (!container) return;
+  const target = container.querySelector(".attribute-value .attribute")
+    ?? container.querySelector(".attribute-value")
+    ?? container.querySelector(":scope > label");
+  if (!target) return;
+  target.classList.add("pf1e-ru-fast-healing-slot");
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "pf1e-ru-fast-healing-inline";
+  button.title = `Применить быстрое лечение (${amount} ПЗ)`;
+  button.setAttribute("aria-label", button.title);
+  button.innerHTML = '<i class="fas fa-heartbeat"></i>';
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    void postFastHealingCard(actor).catch((error) => {
+      console.error(`${MODULE_ID} | Не удалось создать карточку быстрого лечения.`, error);
+    });
+  });
+  target.append(button);
+}
+
 function injectRenderedActorSheetTools(sheet) {
   const actor = getActorFromSheet(sheet);
   if (!isSupportedActor(actor) || isPartyActor(actor) || !canManageActor(actor)) return;
   const root = sheet?.element?.[0] ?? sheet?.element;
   injectActorInventoryIdentification(root, actor);
+  injectActorFastHealingControl(root, actor);
   const header = root?.querySelector?.(".window-header");
   if (!header) return;
   header.querySelectorAll(".pf1e-ru-identification-tool, .pf1e-ru-fast-healing-tool").forEach((element) => element.remove());
-  const close = header.querySelector(".header-button.close");
-  const insert = (link) => close ? close.before(link) : header.append(link);
-  const amount = getFastHealingAmount(actor);
-  if (amount) {
-    insert(createActorSheetHeaderLink({
-      className: "pf1e-ru-fast-healing-tool",
-      label: `Быстрое лечение ${amount}`,
-      icon: "fas fa-heartbeat",
-      onClick: () => postFastHealingCard(actor).catch((error) => console.error(`${MODULE_ID} | Не удалось создать карточку быстрого лечения.`, error))
-    }));
-  }
 }
 
 Hooks.once("init", () => {
@@ -1281,7 +1282,6 @@ Hooks.on("updateItem", (item, _changed, options, userId) => {
     console.error(`${MODULE_ID} | Не удалось синхронизировать изображение опознанного предмета.`, error);
   });
 });
-Hooks.on("getActorSheetHeaderButtons", injectActorSheetTools);
 Hooks.on("renderActorSheet", injectRenderedActorSheetTools);
 Hooks.on("renderItemSheet", (sheet, html) => {
   const root = html?.[0] ?? html ?? sheet?.element?.[0];

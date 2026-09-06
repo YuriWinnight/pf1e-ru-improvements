@@ -126,7 +126,8 @@ const DAMAGE_REDUCTION_BYPASS_GROUPS = [
   { label: "Тип физического урона", entries: [["slashing", "Режущее"], ["piercing", "Колющее"], ["bludgeoning", "Дробящее"]] },
   { label: "Материалы", entries: [["silver", "Серебро"], ["coldiron", "Холодное железо"], ["adamantine", "Адамантин"]] },
   { label: "Мировоззрение", entries: [["good", "Добро"], ["lawful", "Принципиальность"], ["evil", "Зло"], ["chaotic", "Хаос"]] },
-  { label: "Магические свойства", entries: [["magic", "Магия"], ["epic", "Эпическое"]] }
+  { label: "Магические свойства", entries: [["magic", "Магия"], ["epic", "Эпическое"]] },
+  { label: "Другое", entries: [["hardness", "Твёрдость"], ["nonlethal", "Несмертельное"]] }
 ];
 const DAMAGE_REDUCTION_BYPASS_TYPES = new Map(
   DAMAGE_REDUCTION_BYPASS_GROUPS.flatMap((group) => group.entries)
@@ -1523,6 +1524,31 @@ function translateActorRollFlavor(root) {
   if (translated !== value) flavor.textContent = translated;
 }
 
+function translateItemPropertyTags(root) {
+  if (!isRussian() || !(root instanceof HTMLElement)) return;
+  const selector = ".item-summary > .item-properties > .tag, .property-group .tag-list > .tag";
+  const tags = [...root.querySelectorAll(selector)];
+  if (root.matches(selector)) tags.unshift(root);
+  for (const tag of tags) {
+    // Обрабатываем только целые служебные плашки, без описаний и ссылок на предметы.
+    if (tag.children.length) continue;
+    const value = tag.textContent ?? "";
+    let translated = value.replace(/^(\s*[+-]?\d+(?:[.,]\d+)?)\s+Enhancement\s*$/i, "$1 Усиление");
+    if (/^\s*(?:Range|Дистанция)\s*:/i.test(value)) {
+      translated = value.replace(/^(\s*)Range\s*:/i, "$1Дистанция:")
+        .replace(/(\d+(?:[.,]\d+)?)\s*ft\b\.?/gi, "$1 фт.");
+    }
+    if (translated !== value) tag.textContent = translated;
+  }
+}
+
+function translateChargeSourceLabel(root) {
+  if (!isRussian() || !(root instanceof HTMLElement)) return;
+  for (const label of root.querySelectorAll(".form-group.uses-source > label")) {
+    if (label.textContent.trim() === "Charge Source") label.textContent = "Источник зарядов";
+  }
+}
+
 function translateChatMetadata(root) {
   if (!isRussian() || !(root instanceof HTMLElement)) return;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -1618,6 +1644,7 @@ function processChatMessage(message, html) {
   const root = html?.[0] ?? html;
   translateActorRollFlavor(root);
   translateChatMetadata(root);
+  translateItemPropertyTags(root);
   translateLevelUpReport(root);
   translateDamageTypeVisuals(root);
   for (const label of root?.querySelectorAll?.(".property-group > label") ?? []) {
@@ -2082,7 +2109,7 @@ function installDamageReductionDisplayFix() {
     damages.value.forEach((entry, counter) => {
       const firstId = String(entry?.types?.[0] ?? "").toLowerCase();
       const secondId = String(entry?.types?.[1] ?? "").toLowerCase();
-      if (!DAMAGE_REDUCTION_BYPASS_TYPES.has(firstId)
+      if ((firstId || secondId) && !DAMAGE_REDUCTION_BYPASS_TYPES.has(firstId)
         && !DAMAGE_REDUCTION_BYPASS_TYPES.has(secondId)) return;
 
       const firstType = typeName(firstId);
@@ -2097,7 +2124,7 @@ function installDamageReductionDisplayFix() {
           type2: secondType
         });
       }
-      result[String(counter + 1)] = `${entry.amount}/${bypassLabel}`;
+      result[String(counter + 1)] = `${entry.amount}/${bypassLabel || "—"}`;
     });
     return result;
   };
@@ -2132,7 +2159,7 @@ function enhanceResistanceSelector(app, root) {
       for (const [id, fallbackLabel] of group.entries) {
         const option = document.createElement("option");
         option.value = id;
-        option.textContent = currentLabels.get(id)
+        option.textContent = ["hardness", "nonlethal"].includes(id) ? fallbackLabel : currentLabels.get(id)
           ?? globalThis.pf1?.registry?.damageTypes?.get(id)?.name
           ?? fallbackLabel;
         optgroup.append(option);
@@ -2212,6 +2239,21 @@ function translateItemApplication(app, root) {
   }
 
   replaceExactRenderedText(root, common);
+}
+
+function translateItemActionProperties(root) {
+  if (!isRussian() || !(root instanceof HTMLElement)) return;
+  const isActionEditor = Boolean(
+    root.querySelector('input[name="nonlethal"]')
+    && root.querySelector('input[name="touch"]')
+    && root.querySelector('select[name="actionType"]')
+  );
+  if (!isActionEditor) return;
+  for (const header of root.querySelectorAll("h3.form-header")) {
+    const text = header.textContent.trim();
+    if (!["Properties", "Свойства", "Статус снаряжения", "Статус заклинания"].includes(text)) continue;
+    header.textContent = "Статус";
+  }
 }
 
 function makeSettingsEditorResizable(app, root) {
@@ -2311,6 +2353,7 @@ function installActorSheetTranslationObserver(app, root) {
         markActorSheetUserContent(app, element);
         translateActorSheetFixedFields(element);
         translateRenderedHtml(element);
+        translateItemPropertyTags(element);
       }
     } finally {
       if (root.isConnected) observer.observe(root, observerOptions);
@@ -2495,6 +2538,7 @@ function processActorSheet(app, html) {
   markActorSheetUserContent(app, root);
   translateActorSheetFixedFields(root);
   translateRenderedHtml(root);
+  translateItemPropertyTags(root);
   installActorSheetTranslationObserver(app, root);
   redirectReferenceBooks(root);
   separateFearConditions(root);
@@ -2596,9 +2640,12 @@ Hooks.on("renderItemSheet", (app, html) => {
   const root = html?.[0] ?? html;
   translateWeaponPropertyCheckboxes(root);
   translateScriptCallSectionLabels(root);
+  translateChargeSourceLabel(root);
+  translateItemActionProperties(root);
   if (!isNewlyCreatedItemSheet(app)) return;
   translateRenderedHtml(root);
   translateItemApplication(app, root);
+  translateItemActionProperties(root);
 });
 Hooks.on("closeItemSheet", (app) => {
   const item = app?.item
@@ -2614,6 +2661,8 @@ Hooks.on("pf1PreActorRollSave", prepareRussianSaveRoll);
 Hooks.on("renderApplication", (app, html) => {
   const root = html?.[0] ?? html;
   translateDamageTypeVisuals(root);
+  translateItemActionProperties(root);
+  translateChargeSourceLabel(root);
   if (app?.id === "settings-editor") translateRenderedHtml(root);
   makeSettingsEditorResizable(app, root);
 });
