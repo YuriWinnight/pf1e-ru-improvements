@@ -10,6 +10,8 @@ const CONDITION_CONTEXT_NOTES_PATCH = `${MODULE_ID}.conditionContextNotesPatched
 const DAMAGE_REDUCTION_FORMAT_PATCH = `${MODULE_ID}.damageReductionFormatPatched`;
 const ATHLETICS_SKILL_ID = "athletics";
 const ATHLETICS_ACTOR_TYPES = new Set(["character", "npc"]);
+const ATHLETICS_PICKER_PATCH = `${MODULE_ID}.athleticsChangePicker`;
+const athleticsBuffTarget = { label: "Атлетика", category: "skill" };
 const LEGACY_FEAR_CONDITION_IDS = ["shaken", "frightened", "panicked"];
 const FASCINATED_CONDITION_ID = "fascinated";
 const FASCINATED_CONDITION_NAME = "Заворожён";
@@ -221,10 +223,61 @@ function registerAthleticsSetting() {
     type: Boolean,
     default: false,
     onChange: (enabled) => {
+      syncAthleticsChangeTarget(enabled);
+      for (const app of Object.values(ui.windows ?? {})) {
+        if (isAthleticsTargetPicker(app)) app.render(false);
+      }
       if (!enabled) return;
       void addAthleticsToExistingActors({ notify: true }).catch(reportAthleticsError);
     }
   });
+}
+
+function syncAthleticsChangeTarget(enabled = game.settings.get(MODULE_ID, ATHLETICS_SETTING)) {
+  const config = globalThis.pf1?.config;
+  const key = `skill.${ATHLETICS_SKILL_ID}`;
+  for (const targets of [config?.buffTargets, config?.contextNoteTargets]) {
+    if (!targets) continue;
+    if (enabled) targets[key] ??= athleticsBuffTarget;
+    else if (targets[key] === athleticsBuffTarget) delete targets[key];
+  }
+}
+
+function isAthleticsTargetPicker(app) {
+  return app.options?.classes?.includes("change-target-selector")
+    || app.options?.title === "PF1.Application.ContextNoteTargetSelector.Title";
+}
+
+function installAthleticsChangePicker() {
+  const prototype = globalThis.pf1?.applications?.Widget_CategorizedItemPicker?.prototype;
+  if (!prototype || prototype[ATHLETICS_PICKER_PATCH]) return;
+  const original = prototype.getData;
+  if (typeof original !== "function") return;
+  prototype.getData = function(...args) {
+    const data = original.apply(this, args);
+    if (!isAthleticsTargetPicker(this)) return data;
+    const key = `skill.${ATHLETICS_SKILL_ID}`;
+    const enabled = game.settings.get(MODULE_ID, ATHLETICS_SETTING);
+    // Work on render data, preserving stored changes and the picker's original categories.
+    data.items = data.items.filter(item => enabled || item.key !== key);
+    data.categories = data.categories.map(category => ({ ...category }));
+    if (enabled && !data.items.some(item => item.key === key)) {
+      data.items.push({ key, label: athleticsBuffTarget.label, category: "skill" });
+    }
+    if (enabled && !data.categories.some(category => category.key === "skill")) {
+      data.categories.push({ key: "skill", label: game.i18n.localize("PF1.BuffTarSpecificSkill") });
+    }
+    const category = data.categories.find(category => category.key === "skill");
+    if (category && isRussian()) category.label = "Определённый навык";
+    const locale = isRussian() ? "ru" : game.i18n.lang;
+    const skills = data.items.filter(item => item.category === "skill").sort((left, right) =>
+      game.i18n.localize(left.label).localeCompare(game.i18n.localize(right.label), locale, { sensitivity: "base", numeric: true })
+    );
+    let index = 0;
+    data.items = data.items.map(item => item.category === "skill" ? skills[index++] : item);
+    return data;
+  };
+  prototype[ATHLETICS_PICKER_PATCH] = true;
 }
 
 function registerFearRulesSetting() {
@@ -940,9 +993,13 @@ const RU_OVERRIDES = {
   "PF1.BonusModifierHaste": "Ускорение",
   "PF1.Haste": "Ускорение",
   "PF1.BuffTarUntrainedSkills": "Навыки без изучения",
+  "PF1.BuffTarSpecificSkill": "Определённый навык",
+  "PF1.Application.ContextNoteTargetSelector.Title": "Выбрать цель ситуативных примечаний",
   "PF1.CarryStrength": "Силу переноски",
   "PF1.CarryMultiplier": "Модификатор переноски",
   "PF1.GiveItem": "Передать предмет актёру",
+  "PF1.SecondaryAttackAbilityMultiplier": "Модификатор урона вспомогательной атаки",
+  "PF1.SecondaryAttackModifier": "Бонус вспомогательной атаки",
   "PF1.SplitItem": "Разделить предмет",
   "PF1.Dialog.SplitItem.Title": "Разделить предмет: {name}",
   "PF1.Dialog.SplitItem.Desc": "Укажите количество, которое нужно отделить.",
@@ -1187,6 +1244,8 @@ function refreshLocalizedPf1Config() {
   if (pf1.config.buffTargets?.carryStr) pf1.config.buffTargets.carryStr.label = RU_OVERRIDES["PF1.CarryStrength"];
   if (pf1.config.buffTargets?.carryMult) pf1.config.buffTargets.carryMult.label = RU_OVERRIDES["PF1.CarryMultiplier"];
   if (pf1.config.buffTargetCategories?.defense) pf1.config.buffTargetCategories.defense.label = RU_OVERRIDES["PF1.Defense"];
+  if (pf1.config.buffTargetCategories?.skill) pf1.config.buffTargetCategories.skill.label = RU_OVERRIDES["PF1.BuffTarSpecificSkill"];
+  if (pf1.config.contextNoteCategories?.skill) pf1.config.contextNoteCategories.skill.label = RU_OVERRIDES["PF1.BuffTarSpecificSkill"];
   if (pf1.config.contextNoteCategories?.defense) pf1.config.contextNoteCategories.defense.label = RU_OVERRIDES["PF1.Defense"];
 }
 
@@ -2571,6 +2630,8 @@ Hooks.once("canvasInit", installFoundry11CompatibilityShims);
 Hooks.once("ready", async () => {
   installFoundry11CompatibilityShims();
   applyRussianTranslations();
+  syncAthleticsChangeTarget();
+  installAthleticsChangePicker();
   installDamageReductionDisplayFix();
   installSpellComponentAbbreviations();
   installFearRulesConfiguration();
