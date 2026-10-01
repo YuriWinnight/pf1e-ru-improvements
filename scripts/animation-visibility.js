@@ -1,3 +1,5 @@
+import { canSeeOwnHiddenToken } from "./visibility-settings.js";
+
 // Sequencer 3.x checks TokenMesh.visible, which does not reflect Token.visible in Foundry 11.
 // Gate rendering locally instead of ending effects or changing their shared data/animation state.
 const ANIMATION_VISIBILITY_WRAPPER = Symbol("pf1e-ru-improvements.animation-visibility");
@@ -7,7 +9,7 @@ function canViewAnimationToken(document, reference) {
     // A token not yet drawn (or just deleted) must not leak through a cached effect position.
     return !(typeof reference === "string" && /^Scene\.[^.]+\.Token\.[^.]+$/.test(reference));
   }
-  if (document.hidden) return false;
+  if (document.hidden && !canSeeOwnHiddenToken(document)) return false;
   const token = document.object;
   // Foundry resolves invisibility, special senses and the current user's vision into this value.
   // Do not evaluate Token.isVisible here: its getter changes detectionFilter and repeats LOS tests.

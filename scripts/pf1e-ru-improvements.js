@@ -2518,24 +2518,34 @@ function separateFearConditions(root) {
 }
 
 function separateFearTokenStatuses(_app, html) {
-  if (!fearRulesEnabled()) return;
   const root = html?.[0] ?? html;
   if (!(root instanceof HTMLElement)) return;
   const palette = root.querySelector(".status-effects");
   if (!palette) return;
 
   palette.querySelectorAll(":scope > .pf1e-ru-fear-token-heading").forEach((heading) => heading.remove());
-  const fearIcons = FEAR_CONDITION_IDS.map((conditionId) =>
-    palette.querySelector(`:scope > .effect-control[data-status-id="${conditionId}"]`)
-  ).filter(Boolean);
-  if (!fearIcons.length) return;
+  const icons = [...palette.querySelectorAll(":scope > .effect-control")];
+  const fearIds = fearRulesEnabled() ? FEAR_CONDITION_IDS : [];
+  const conditionIds = new Set(CONFIG.statusEffects.map(effect => effect.id).filter(Boolean));
+  const groups = [[], [], []];
+  for (const icon of icons) {
+    const id = icon.dataset.statusId;
+    const group = fearIds.includes(id) ? 1 : conditionIds.has(id) ? 0 : 2;
+    groups[group].push(icon);
+  }
+  groups[1].sort((a, b) => fearIds.indexOf(a.dataset.statusId) - fearIds.indexOf(b.dataset.statusId));
 
   palette.classList.add("pf1e-ru-fear-token-palette");
-  const heading = document.createElement("div");
-  heading.className = "pf1e-ru-fear-token-heading";
-  heading.textContent = "Состояния ужаса";
-  palette.append(heading);
-  for (const icon of fearIcons) palette.append(icon);
+  const labels = ["Состояния", "Состояния ужаса", "Эффекты"];
+  groups.forEach((group, index) => {
+    if (!group.length) return;
+    const heading = document.createElement("div");
+    heading.className = "pf1e-ru-fear-token-heading";
+    heading.textContent = labels[index];
+    palette.append(heading);
+    // Move the original controls so PF1's click handlers and overlay state survive.
+    for (const icon of group) palette.append(icon);
+  });
 }
 
 function enableSensesScrolling(root) {
