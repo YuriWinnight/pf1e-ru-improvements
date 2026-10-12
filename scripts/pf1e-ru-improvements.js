@@ -756,6 +756,8 @@ const CONSUMABLE_ICONS = {
 let pendingConsumableIconChoice = null;
 
 const RU_OVERRIDES = {
+  "PF1.ChooseAnAction": "Выберите действие",
+  "PF1.Application.ActionChooser.Title": "{actor} использует {item}",
   "PFPGA.AC.TouchShort": "Касание",
   "PFPGA.AC.FlatFootedShort": "Врасплох",
   "PF1AS.Abilities": "Характеристики",

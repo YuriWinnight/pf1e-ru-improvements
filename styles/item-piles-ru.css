@@ -1,0 +1,74 @@
+/* Applied only to Russian Item Piles windows by item-piles-ru.js. */
+.pf1e-ru-item-piles .tabs .item {
+  white-space: normal;
+  line-height: 1.2;
+  padding: 6px;
+  text-align: center;
+}
+.pf1e-ru-item-piles .item-piles-config-container .form-group {
+  flex-wrap: wrap;
+}
+.pf1e-ru-item-piles .item-piles-config-container .form-group > label {
+  white-space: normal;
+  line-height: 1.3;
+}
+/* A full-width control must also give its label a separate full-width row.
+   Otherwise an inline flex:4 label can collapse to zero beside a 100% select. */
+.pf1e-ru-item-piles .item-piles-config-container .form-group:has(> select) > label,
+.pf1e-ru-item-piles .item-piles-config-container .form-group:has(> button) > label {
+  flex: 1 0 100% !important;
+  width: 100%;
+  min-width: 100%;
+}
+.pf1e-ru-item-piles .item-piles-config-container .form-group > select,
+.pf1e-ru-item-piles .item-piles-config-container .form-group > button {
+  flex: 1 1 100% !important;
+  width: 100%;
+  min-width: 0;
+  margin: 4px 0;
+}
+.pf1e-ru-item-piles .item-piles-config-container button,
+.pf1e-ru-item-piles .item-piles-populate-header .item-piles-button,
+.pf1e-ru-item-piles footer button {
+  white-space: normal;
+  height: auto;
+  min-height: 28px;
+  line-height: 1.3;
+  padding: 5px;
+}
+.pf1e-ru-item-piles .item-piles-sortable-list-columns.header > div {
+  white-space: normal;
+  line-height: 1.2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.pf1e-ru-item-piles .pf1e-ru-primary-currencies .item-piles-sortable-list-columns {
+  grid-template-columns: 76px minmax(90px, 1.25fr) 92px minmax(92px, .7fr) 60px minmax(100px, 1fr) 28px !important;
+}
+.pf1e-ru-item-piles .pf1e-ru-secondary-currencies .item-piles-sortable-list-columns {
+  grid-template-columns: minmax(90px, 1.25fr) minmax(92px, .7fr) 60px minmax(100px, 1fr) 28px !important;
+}
+.pf1e-ru-item-piles .pf1e-ru-purchase-prices .item-piles-sortable-list-columns {
+  grid-template-columns: 28px minmax(80px, 1.1fr) 48px 108px 28px minmax(88px, .7fr) 48px minmax(90px, 1fr) 28px !important;
+}
+.pf1e-ru-item-piles .pf1e-ru-primary-currencies,
+.pf1e-ru-item-piles .pf1e-ru-secondary-currencies,
+.pf1e-ru-item-piles .pf1e-ru-purchase-prices {
+  overflow-x: auto;
+}
+.item-piles-app.pf1e-ru-item-piles .item-pile-column-grid {
+  /* Svelte repeats its scope class three times in the original rule. */
+  grid-template-columns: 1fr 1fr minmax(110px, .8fr) minmax(80px, max-content) minmax(80px, max-content) 1fr auto !important;
+  column-gap: 8px !important;
+}
+.pf1e-ru-item-piles .pf1e-ru-add-table-row > .item-piles-button {
+  flex: 0 0 140px;
+  min-width: 140px !important;
+  max-width: 140px !important;
+  white-space: nowrap;
+}
+.pf1e-ru-item-piles .pf1e-ru-add-table-row > select {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: calc(100% - 148px) !important;
+}
