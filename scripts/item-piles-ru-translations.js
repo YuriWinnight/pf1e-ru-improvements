@@ -12,6 +12,8 @@ const groups = {
   },
   "Applications.ItemPileConfig": { Update: "Обновить Item Pile" },
   "Merchant": {
+    Buy: "Купить", Sell: "Продать", SellItems: "Продажа предметов", ItemFree: "Бесплатно",
+    ShoppingAs: "Вы закупаетесь как {actorName}",
     Title: "Торговец: {actor_name}", BuyItems: "Покупка товаров", PopulateItems: "Пополнение ассортимента",
     RollableTables: "Случайные таблицы", RollAllTables: "Бросок по всем таблицам", AddTable: "Добавить таблицу",
     ClickRoll: "Нажмите «Бросок», чтобы начать", KeepRolled: "Сохранять выпавшее",
@@ -177,7 +179,13 @@ const groups = {
     ExpandColumnsRowsExplanation: "Когда включён параметр выше, определяет количество дополнительных столбцов и/или строк в тайнике. Расширение не может превышать максимальную вместимость тайника."
   },
   "Applications.ItemPileConfig.Vault": { Columns: "Столбцы", Rows: "Строки" },
-  "Applications.TradeMerchantItem": { Quantity: "Количество" }
+  "Applications.TradeMerchantItem": {
+    Quantity: "Количество", Title: "Покупка предмета: {item_name}",
+    BuyItem: "Купить товар", SellItem: "Продать товар",
+    YouPay: "Вы заплатите", YouReceive: "Вы получаете", TheyReceive: "Торговец получает",
+    Change: "Сдача", YouCantAfford: "У вас недостаточно средств для покупки",
+    TheyCantAfford: "У торговца недостаточно средств для покупки", MaxQuantity: "Максимум: {quantity}"
+  }
 };
 
 export const ITEM_PILES_RU = Object.fromEntries(Object.entries(groups).flatMap(([group, entries]) =>

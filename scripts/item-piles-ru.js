@@ -20,15 +20,15 @@ function applyTranslations() {
 function translateDefaultCurrencies(currencies) {
   if (!Array.isArray(currencies)) return currencies;
   const defaults = {
-    "system.currency.pp": ["{#}P", "{#}П", "{#}пм"],
-    "system.currency.gp": ["{#}G", "{#}З", "{#}зм"],
-    "system.currency.sp": ["{#}S", "{#}С", "{#}см"],
-    "system.currency.cp": ["{#}C", "{#}М", "{#}мм"]
+    "system.currency.pp": ["{#}P", "{#}П", "{#}пм", "{#} пм", "{#}\u202fпм"],
+    "system.currency.gp": ["{#}G", "{#}З", "{#}зм", "{#} зм", "{#}\u202fзм"],
+    "system.currency.sp": ["{#}S", "{#}С", "{#}см", "{#} см", "{#}\u202fсм"],
+    "system.currency.cp": ["{#}C", "{#}М", "{#}мм", "{#} мм", "{#}\u202fмм"]
   };
   return currencies.map(currency => {
     const pair = defaults[currency?.data?.path];
-    return currency?.type === "attribute" && pair && pair.slice(0, 2).includes(currency.abbreviation)
-      ? { ...currency, abbreviation: pair[2] } : currency;
+    return currency?.type === "attribute" && pair && pair.slice(0, -1).includes(currency.abbreviation)
+      ? { ...currency, abbreviation: pair.at(-1) } : currency;
   });
 }
 
@@ -60,8 +60,38 @@ function translateLabel(element) {
   }
 }
 
+function translateItemCategories(root) {
+  // Read PF1's existing inventory labels without changing CONFIG.Item.typeLabels
+  // or shared localization keys used by other applications.
+  const types = {
+    weapon: ["Weapon", "PF1.InventoryWeapons", "Оружие"],
+    equipment: ["Equipment, Magic Item, etc.", "PF1.InventoryArmorEquipment", "Броня/Снаряжение"],
+    consumable: ["Consumable", "PF1.InventoryConsumables", "Расходники"],
+    loot: ["Loot", "PF1.ItemTypeLoot", "Добыча"]
+  };
+  const custom = new Set(game.settings?.settings?.has("item-piles.customItemCategories")
+    ? game.settings.get("item-piles", "customItemCategories") : []);
+  for (const [type, [english, key, fallback]] of Object.entries(types)) {
+    const localized = game.i18n.localize?.(key);
+    const value = localized && /[А-Яа-яЁё]/.test(localized) ? localized : fallback;
+    const labels = new Set([english, globalThis.CONFIG?.Item?.typeLabels?.[type]]);
+    const elements = root.querySelectorAll(`.merchant-item-group-type > h3, select option[value="${type}"]`);
+    for (const element of elements) {
+      if (element.closest(protectedContent)) continue;
+      const current = element.textContent.trim();
+      if (!labels.has(current) || custom.has(current)) continue;
+      for (const node of element.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE && node.data.trim() === current) {
+          node.data = node.data.replace(current, value);
+        }
+      }
+    }
+  }
+}
+
 function translateWindow(root) {
   if (!enabled()) return;
+  translateItemCategories(root);
   // These headers contain UI column labels; the rows below contain user data.
   for (const header of root.querySelectorAll(".item-piles-sortable-list-columns.header")) {
     const labels = Array.from(header.children, cell => cell.textContent.trim());
@@ -147,7 +177,8 @@ function onRender(app, html) {
   const title = root.querySelector(".window-title")?.textContent.trim() ?? app.title ?? "";
   const editorWidths = {
     ItemEditor: 760, CurrenciesEditor: 820, SecondaryCurrenciesEditor: 720,
-    ItemTypePriceModifiersEditor: 740, PriceModifiersEditor: 740, MerchantColumnsEditor: 820
+    ItemTypePriceModifiersEditor: 740, PriceModifiersEditor: 740, MerchantColumnsEditor: 820,
+    TradeMerchantItem: 460
   };
   let desired = root.matches(".item-piles-merchant-sheet") ? 960 : root.matches(".item-piles-config") ? 660 : 0;
   for (const [editor, width] of Object.entries(editorWidths)) {

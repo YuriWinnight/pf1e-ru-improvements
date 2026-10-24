@@ -1,4 +1,8 @@
 /* Applied only to Russian Item Piles windows by item-piles-ru.js. */
+.pf1e-ru-item-piles.item-piles-merchant-sheet .item-piles-item-row .price-container small {
+  font-size: 100%;
+  white-space: nowrap;
+}
 .pf1e-ru-item-piles .tabs .item {
   white-space: normal;
   line-height: 1.2;
