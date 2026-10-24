@@ -1,6 +1,6 @@
 import { MODULE, escapeHTML as esc } from './special-materials.js';
 import { focusToken, bindTokenHover } from './token-navigation.js';
-import { queueDamageRequest } from './damage-application.js';
+import { queueDamageRequest, messageAudience } from './damage-application.js';
 import { TEMPLATE_DEFAULTS, evasionFor, saveSuccess, successDamage, targetDamageMode, uniqueTemplateTargets } from './template-damage-rules.js';
 const clone = value => foundry.utils.deepClone(value);
 const flag = (doc, key) => doc?.getFlag(MODULE, key);
@@ -86,6 +86,7 @@ export function cardContent(state) {
       <div class="pf1ru-template-actor">${state.allowExclusions && controls ? `<input type="checkbox" data-template-field="included" data-row="${i}" ${row.excluded ? '' : 'checked'} title="Включить цель">` : ''}<button type="button" class="pf1ru-template-token" data-template-token="${i}" title="Найти токен: ${esc(row.name)}" aria-label="Найти токен: ${esc(row.name)}"><img src="${esc(row.img || 'icons/svg/mystery-man.svg')}" alt=""></button><strong>${esc(row.name)}</strong></div>
       <div>${row.save ? `Испытание: ${row.save.total == null ? 'решение мастера' : esc(row.save.total)}${row.save.natural != null ? ` (d20: ${esc(row.save.natural)})` : ''} — <strong class="pf1ru-save-${row.save.success ? 'success' : 'failure'}">${saveLabel(row.save)}</strong>${row.save.manual ? ' · исправлено мастером' : ''}` : state.saveType ? 'Испытание ещё не выполнено' : 'Испытание не требуется'}</div>
       ${row.evasion?.note && state.saveType === 'ref' && state.successMode === 'half' ? `<div class="notes">${esc(row.evasion.note)}</div>` : ''}
+      ${row.notes ? `<div class="pf1ru-save-notes"><strong>Примечания</strong>${row.notes}</div>` : ''}
       <div>${esc(damageNames[targetDamageMode(state, row)] ?? 'Ожидает испытания')}</div>
       ${row.error ? `<p class="pf1ru-template-error">${esc(row.error)}</p>` : ''}
       ${controls ? `<div class="pf1ru-template-row-controls">${state.saveType ? `<button type="button" data-template-action="roll" data-row="${i}" ${row.excluded ? 'disabled' : ''}><i class="fas fa-dice-d20"></i> ${row.save ? 'Перебросить' : 'Испытание'}</button><button type="button" data-template-action="edit" data-row="${i}"><i class="fas fa-edit"></i> Исправить</button>` : ''}${select('override', row.override ?? '', { '': 'По результату', full: 'Полный урон', half: 'Половина', none: 'Без урона' }, i)}</div>` : ''}
@@ -94,7 +95,7 @@ export function cardContent(state) {
     ${state.error ? `<p class="pf1ru-template-error">${esc(state.error)}</p>` : ''}
     ${controls && state.rows.length ? `<div class="pf1ru-template-controls">${state.saveType ? '<button type="button" data-template-action="rollAll"><i class="fas fa-dice-d20"></i> Бросить за остальных</button>' : ''}<button type="button" data-template-action="apply"><i class="fas fa-check"></i> ${state.autoDamage && state.allowExclusions ? 'Подтвердить цели и применить урон' : 'Применить урон'}</button></div>` : ''}
     ${state.status === 'applied' ? '<p>Обработка завершена. Отмена и замена доступны в уведомлении об уроне.</p>' : ''}
-    <p class="notes">Цели зафиксированы при установке. Перемещение шаблона не наносит повторный урон. Половина считается до защит.</p></section>`;
+    </section>`;
 }
 function saveLabel(save) {
   if (!save.manual && save.natural === 20) return 'Критический успех';
@@ -102,11 +103,24 @@ function saveLabel(save) {
   return save.success ? 'Успех' : 'Провал';
 }
 async function saveCard(card, state) { await card.update({ content: cardContent(state), [`flags.${MODULE}.templateWorkflow`]: state }); }
+async function saveNotes(actor, type) {
+  if (!type || !actor.getContextNotesParsed) return '';
+  const notes = actor.getContextNotesParsed(`savingThrow.${type}`, { roll: false });
+  return TextEditor.enrichHTML(notes.map(note => `<div>${note}</div>`).join(''), { async: true, rolls: false, secrets: game.settings.get(MODULE, 'templateSavesGMOnly') === true });
+}
 export async function rollTemplateSave(state, row) {
   const actor = await fromUuid(row.actorUuid), token = await fromUuid(row.uuid);
   if (!actor) throw new Error('Актёр больше не существует.');
+  row.notes = await saveNotes(actor, state.saveType);
   if (!saveNames[state.saveType] || !Number.isFinite(state.dc)) throw new Error('Проверьте тип испытания и СЛ в действии; результат можно задать вручную.');
   const data = await actor.rollSavingThrow(state.saveType, { skipDialog: true, chatMessage: false, noSound: true, token: token?.object ?? token });
+  if (data?.content && globalThis.DOMParser) {
+    const native = new DOMParser().parseFromString(data.content, 'text/html');
+    const groups = [...native.querySelectorAll('.property-group')].filter(group => group.querySelector('label')?.textContent.trim() === game.i18n.localize('PF1.Notes'));
+    if (groups.length) row.notes = await TextEditor.enrichHTML(groups.map(group => group.querySelector('.tag-list')?.innerHTML ?? '').join(''), {
+      async: true, rolls: false, secrets: game.settings.get(MODULE, 'templateSavesGMOnly') === true
+    });
+  }
   let roll = data?.rolls?.[0];
   if (typeof roll === 'string') roll = JSON.parse(roll);
   if (!roll || !Number.isFinite(Number(roll.total))) throw new Error('Бросок испытания отменён или не вернул результат.');
@@ -160,11 +174,11 @@ export async function createTemplateCards(source, { resume = false } = {}) {
         const token = await fromUuid(uuid), actor = token?.actor;
         if (!actor || seen.has(actor.uuid)) continue;
         seen.add(actor.uuid); state.rows.push({ uuid, actorUuid: actor.uuid, name: token.name, img: /\.(webm|mp4)(?:[?#]|$)/i.test(token.texture?.src ?? '') ? actor.img : token.texture?.src ?? actor.img,
-          excluded: false, save: null, override: '', evasion: evasionFor(actor) });
+          excluded: false, save: null, override: '', evasion: evasionFor(actor), notes: await saveNotes(actor, state.saveType) });
       }
       if (state.autoSaves && !state.error) await rollMissing(state);
       // A private GM list avoids exposing hidden tokens and NPC saves to players.
-      const card = await ChatMessage.create({ content: cardContent(state), whisper: game.users.filter(u => u.isGM).map(u => u.id),
+      const card = await ChatMessage.create({ content: cardContent(state), ...messageAudience(source, 'templateSavesGMOnly'),
         flags: { [MODULE]: { templateWorkflow: state, damageSnapshot: { version: 1, actor: snapshot.actor, targets: state.rows.map(r => r.uuid), attacks: [clone(attack)] } } } });
       await source.setFlag(MODULE, `templateCards.${index}`, card.id);
       if (state.autoDamage && !state.allowExclusions && state.rows.length && !state.error && state.rows.every(r => targetDamageMode(state, r))) await applyTemplateDamage(card, state);
@@ -220,15 +234,20 @@ Hooks.on('updateChatMessage', (card, change, options, userId) => {
 Hooks.on('renderChatMessage', (card, html) => {
   const state = flag(card, 'templateWorkflow'); if (game.system.id !== 'pf1' || !state) return;
   const root = html[0] ?? html;
-  if (!game.user.isGM) { root.querySelector('.pf1ru-template-card')?.remove(); return; }
+  root.querySelectorAll('.pf1ru-template-card > p.notes').forEach(note => note.remove());
+  if (!game.user.isGM) {
+    root.querySelectorAll('[data-template-field], [data-template-action]').forEach(control => control.remove());
+    root.querySelectorAll('.pf1ru-template-card > label').forEach(label => label.remove());
+  }
   for (const button of root.querySelectorAll('[data-template-token]')) {
     const uuid = state.rows[Number(button.dataset.templateToken)]?.uuid;
     bindTokenHover(button, uuid);
     button.addEventListener('click', async () => {
-      try { await focusTemplateToken(uuid); }
+      try { await focusToken(uuid); }
       catch (error) { ui.notifications.warn(error.message); }
     });
   }
+  if (!game.user.isGM) return;
   const send = command => card.setFlag(MODULE, `templateCommands.${foundry.utils.randomID()}`, { ...command, revision: state.revision });
   for (const control of root.querySelectorAll('[data-template-field]')) control.addEventListener('change', () => {
     send({ action: control.dataset.templateField, row: control.dataset.row === '' ? null : Number(control.dataset.row), value: control.type === 'checkbox' ? control.checked : control.value });

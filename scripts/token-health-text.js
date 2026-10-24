@@ -33,8 +33,8 @@ function drain() {
     // Start one animation per 90ms, independent of document writes. Hidden or
     // deleted tokens are checked again at display time; no socket broadcasts.
     Promise.resolve().then(() => canvas.interface.createScrollingText({ x: token.center.x, y: token.y }, text, {
-      duration: 700, distance: Math.max(36, token.h * 0.65), anchor: CONST.TEXT_ANCHOR_POINTS.TOP,
-      direction: CONST.TEXT_ANCHOR_POINTS.TOP, fontSize: 28, stroke: 0x000000, strokeThickness: 4,
+      duration: 1400, distance: Math.max(36, token.h * 0.65), anchor: CONST.TEXT_ANCHOR_POINTS.TOP,
+      direction: CONST.TEXT_ANCHOR_POINTS.TOP, fontSize: 34, stroke: 0x000000, strokeThickness: 4,
       fill: job.kind === 'damage' ? 0xff3333 : 0x33cc55
     })).catch(error => console.warn('pf1e-ru-improvements | Health text', error));
   }

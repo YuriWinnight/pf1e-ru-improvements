@@ -34,3 +34,6 @@
 .pf1ru-template-token img { display: block; }
 .pf1ru-damage-heading button.pf1ru-damage-token { flex: 0 0 44px; width: 44px; height: 44px; padding: 0; margin: 0; border: 0; background: transparent; cursor: pointer; }
 .pf1ru-damage-token img, .pf1ru-damage-token video { display: block; }
+.pf1ru-base-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 6px 0; }
+.pf1ru-base-stats input, input.pf1ru-base-inline { width: 100%; min-width: 0; }
+.pf1ru-save-notes { margin: 4px 0; }

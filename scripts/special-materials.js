@@ -70,9 +70,6 @@ Hooks.on("renderItemSheet", (app, html) => {
   const auraHeader = auraField?.previousElementSibling;
   if (auraHeader?.matches("h3.form-header")) auraHeader.before(group); else host.append(group);
   if (materialConfig(item).enabled) {
-    for (const input of root.querySelectorAll('[name="system.hp.max"], [name="system.hardness"], [name="system.weight.value"]')) {
-      input.readOnly = true; input.title = "Изменяется через «Ручная настройка»";
-    }
     for (const input of root.querySelectorAll('[name="system.price"], [data-attr-name="system.price"], .price-description-input')) {
       const tip = `Исходная цена без материала, усиления и искусной работы: ${config.base.price} зм`;
       input.title = tip; input.dataset.tooltip = tip;
@@ -86,8 +83,17 @@ Hooks.on("preUpdateItem", (item, change) => {
   const expanded = foundry.utils.expandObject(change), old = materialConfig(item), sys = item._source.system;
   const incoming = get(expanded, `flags.${MODULE}.material`), enhPath = item.type === "equipment" ? "system.armor.enh" : "system.enh";
   const paths = [enhPath, "system.masterwork", "system.equipmentSubtype", "system.weaponSubtype", "system.properties.dbl"];
+  const basePaths = { hp: 'system.hp.max', hardness: 'system.hardness', weight: 'system.weight.value', price: 'system.price' };
+  if (old.enabled) paths.push(...Object.values(basePaths));
   if (!incoming && !paths.some(p => get(expanded, p) !== undefined && get(expanded, p) !== get(item._source, p))) return;
-  const config = { ...initialMaterialConfig(item), ...incoming };
+  const initial = initialMaterialConfig(item);
+  const config = { ...initial, ...incoming, base: { ...initial.base, ...incoming?.base }, manual: { ...initial.manual, ...incoming?.manual } };
+  if (old.enabled && !incoming) for (const [key, path] of Object.entries(basePaths)) {
+    const value = get(expanded, path);
+    if (value !== undefined && Number(value) !== Number(get(item._source, path))) {
+      config.base[key] = Number(value); if (key !== 'price') config.manual[key] = null;
+    }
+  }
   if (Object.values(config.base).some(v => typeof v === "number" && !Number.isFinite(v))) return false;
   for (const key of ["hp", "hardness", "weight", "price"]) if (config.base[key] < 0) return false;
   const system = { ...sys, ...expanded.system, armor: { ...sys.armor, ...expanded.system?.armor }, properties: { ...sys.properties, ...expanded.system?.properties } };

@@ -1,3 +1,6 @@
+// Load roll modifiers through an established entry point as well: a running
+// Foundry server may still serve the manifest from before this file was added.
+import "./silver-weapon-damage.js";
 import { MODULE, ALIGNMENTS, materialConfig, escapeHTML as esc } from "./special-materials.js";
 import { MATERIALS } from "./special-materials-data.js";
 import { calculateDamage, componentsFromRolls, applyToHealth } from "./damage-rules.js";
@@ -9,6 +12,9 @@ const pendingClicks = new Set();
 let workQueue = Promise.resolve();
 Hooks.on("init", () => {
   if (game.system.id !== "pf1") return;
+  for (const [key, name] of [['damageReceiptGMOnly', 'Итоговый урон виден только ГМ'], ['templateSavesGMOnly', 'Испытания шаблонов видны только ГМ']]) {
+    game.settings.register(MODULE, key, { name, hint: 'Применяется к новым сообщениям. Приватность исходного броска сохраняется.', scope: 'world', config: true, type: Boolean, default: false });
+  }
   game.settings.register(MODULE, "damageCalculationGMOnly", {
     name: "Расчёт урона виден только ГМ",
     hint: "Показывает подробный раздел «Расчёт», включая условия преодолённого СУ, только мастеру. Если выключить, расчёт смогут видеть все участники, которым доступно сообщение. Итог урона остаётся видимым.",
@@ -18,7 +24,21 @@ Hooks.on("init", () => {
 });
 const modes = { none: "Без урона", full: "Полный урон", half: "Половина исходного урона", criticalHalf: "Половина критического урона", critical: "Критический урон", manual: "Итоговый урон вручную", undo: "Урон отменён" };
 const gm = () => game.users.activeGM ?? game.users.find(u => u.active && u.isGM);
-const authorized = (user, source) => Boolean(user && source && (user.isGM || (source.user?.id === user.id && source.isContentVisible)));
+const canProcess = user => gm() ? gm().id === game.user.id : user?.id === game.user.id;
+const authorized = (user, source) => Boolean(user && source && (user.isGM || (!source.blind && (!source.whisper?.length || source.whisper.includes(user.id) || source.user?.id === user.id))));
+const owns = (user, actor) => Boolean(user?.isGM || actor?.testUserPermission(user, 'OWNER'));
+export function messageAudience(source, key) {
+  if (game.settings.get(MODULE, key) === true) return { whisper: game.users.filter(u => u.isGM).map(u => u.id), blind: !game.user.isGM };
+  const original = flag(source, 'templateWorkflow')?.source;
+  if (original) source = game.messages.get(original) ?? source;
+  return { whisper: [...(source?.whisper ?? [])], blind: Boolean(source?.blind) };
+}
+async function ownsTargets(user, source, receipt = null, row = null) {
+  if (user?.isGM) return true;
+  const uuids = receipt ? [flag(receipt, 'damageReceipt')?.rows?.[row]?.uuid] : flag(source, 'damageSnapshot')?.targets ?? [];
+  for (const uuid of uuids) if (uuid && owns(user, (await fromUuid(uuid))?.actor)) return true;
+  return false;
+}
 const health = actor => {
   const hp = actor.system.attributes.hp;
   return { value: Number(hp.value), temp: Number(hp.temp) || 0, nonlethal: Number(hp.nonlethal) || 0, max: Number(hp.max) };
@@ -133,8 +153,8 @@ const damageSummary = row => {
 export const receiptContent = record => `<section class="pf1ru-damage-receipt"><h3>Урон по целям</h3>
   ${record.rows.map((row, i) => `<div class="pf1ru-damage-target"><div class="pf1ru-damage-heading">${targetImage(row)}<span><strong>${esc(row.name)}</strong>: ${row.error ? esc(row.error) + (row.result ? ` Последнее подтверждённое списание: ${row.result.lethal + row.result.nonlethal}.` : "") : esc(modes[row.mode])}</span></div>
   ${damageSummary(row)}
-  <div class="pf1ru-damage-buttons">${Object.entries({ undo: "Отменить", manual: "Ввести итог", half: "Вернуть и списать половину", ...(record.hasCritical ? { critical: "Вернуть и списать критический" } : {}) }).map(([mode, title]) => `<button type="button" data-pf1ru-damage="${mode}" data-row="${i}"><i class="fas fa-${{undo:"undo",manual:"edit",half:"adjust",critical:"bolt"}[mode]}" aria-hidden="true"></i> ${title}</button>`).join("")}</div></div>`).join("")}
-  <p class="notes">Цели сохранены в момент атаки. Половина считается до защит. Повторные кнопки заменяют это списание.</p></section>`;
+  <div class="pf1ru-damage-buttons">${Object.entries({ ...(row.pending ? { full: "Списать урон" } : {}), undo: "Отменить", manual: "Ввести итог", half: "Вернуть и списать половину", ...(record.hasCritical ? { critical: "Вернуть и списать критический" } : {}) }).map(([mode, title]) => `<button type="button" data-pf1ru-damage="${mode}" data-row="${i}"><i class="fas fa-${{full:"check",undo:"undo",manual:"edit",half:"adjust",critical:"bolt"}[mode]}" aria-hidden="true"></i> ${title}</button>`).join("")}</div></div>`).join("")}
+  </section>`;
 
 async function feedback(text, source = null) {
   return ChatMessage.create({ content: `<p class="pf1ru-damage-feedback">${esc(text)}</p>`,
@@ -147,53 +167,60 @@ function manualDialog(callback) {
     } }, cancel: { label: "Отмена" } }, default: "apply" }).render(true);
 }
 export async function requestDamage(source, index, mode, amount, receipt = null, row = null) {
-  if (!authorized(game.user, source)) return;
+  if (!source || !authorized(game.user, receipt ?? source)) return;
+  if (!await ownsTargets(game.user, source, receipt, row)) return;
   const key = `${source.id}:${index}:${receipt?.id ?? ""}:${row ?? ""}`;
   if (pendingClicks.has(key)) return;
-  if (!gm()) return feedback("Для списания по целям нужен подключённый мастер. Урон не изменён.", source);
   pendingClicks.add(key);
   try {
     const id = foundry.utils.randomID();
-    await source.setFlag(MODULE, `damageRequests.${id}`, { source: source.id, index, mode, amount: amount ?? null, receipt: receipt?.id ?? null, row,
-      revision: receipt ? flag(receipt, "damageReceipt").revision : null });
+    const command = { source: source.id, index, mode, amount: amount ?? null, receipt: receipt?.id ?? null, row,
+      revision: receipt ? flag(receipt, "damageReceipt").revision : null };
+    if (gm()) await game.user.setFlag(MODULE, `damageRequests.${id}`, command);
+    else await queueDamageRequest({ id, user: game.user, getFlag: (m, k) => k === 'damageRequest' ? command : undefined,
+      delete: async () => {}, update: async data => feedback(data.content.replace(/<[^>]*>/g, ''), source) });
   } finally { pendingClicks.delete(key); }
 }
 
 export async function processRequest(request) {
   const command = flag(request, "damageRequest");
-  if (!command || flag(request, "damageRequestDone") || gm()?.id !== game.user.id) return;
+  if (!command || flag(request, "damageRequestDone") || !canProcess(request.user)) return;
   const source = game.messages.get(command.source), snapshot = flag(source, "damageSnapshot"), user = request.user;
+  // Without a GM, owners can write their own user flags, but not another
+  // player's attack message. Each application has its own recovery record.
+  const storage = game.user.isGM ? source : game.user;
+  const storageKey = game.user.isGM ? command.index : request.id;
   try {
-    if (!authorized(user, source) || !snapshot || !Object.hasOwn(modes, command.mode)) throw new Error("Нет доступа к этой атаке.");
+    if (!authorized(user, command.receipt ? game.messages.get(command.receipt) : source) || !snapshot || !Object.hasOwn(modes, command.mode)) throw new Error("Нет доступа к этой атаке.");
     if (!Number.isInteger(command.index) || !snapshot.attacks[command.index]) throw new Error("Атака не найдена.");
-    const attacker = await fromUuid(snapshot.actor);
-    if (!user.isGM && !attacker?.testUserPermission(user, "OWNER")) throw new Error("Нет прав владельца атакующего актёра.");
     if (snapshot.templateWorkflowSource) throw new Error("Для урона шаблона используйте список целей в чате мастера.");
+    if (!await ownsTargets(user, source, command.receipt ? game.messages.get(command.receipt) : null, command.row)) { await request.delete(); return; }
     const templateWorkflow = flag(source, "templateWorkflow"), templatePlan = flag(source, "templateDamagePlan");
     if (templateWorkflow && (!source.user?.isGM || (!command.receipt && templateWorkflow.status !== "applying"))) throw new Error("Список целей ещё не подтверждён или уже обработан.");
     const attack = snapshot.attacks[command.index];
     if (attack.healing) throw new Error("Эта карточка содержит лечение, а не урон.");
     let receipt = command.receipt ? game.messages.get(command.receipt) : null;
-    // The source stores a receipt for each attack. A double click cannot create another hit.
-    const receiptId = flag(source, "damageReceipts")?.[command.index];
-    if (!receipt && receiptId) {
-      receipt = game.messages.get(receiptId);
-      if (receipt) throw new Error("Урон этой атаки уже обработан. Используйте кнопки в её сообщении о списании.");
-      throw new Error("Сообщение о списании этой атаки было удалено. Повторное автоматическое списание заблокировано.");
-    }
+    const history = flag(storage, 'damageRequestHistory') ?? [];
+    if (history.includes(request.id)) { await request.delete(); return; }
     let record;
     if (receipt) {
-      if (!receipt.user?.isGM || receipt.id !== receiptId) throw new Error("Сообщение о списании не подтверждено мастером.");
       record = clone(flag(receipt, "damageReceipt"));
       if (!record || record.source !== source.id || record.index !== command.index) throw new Error("Неверная ссылка на атаку.");
       if (record.revision !== command.revision) throw new Error("Это списание уже изменилось. Используйте обновлённое сообщение.");
       if (!Number.isInteger(command.row) || !record.rows[command.row]) throw new Error("Цель не найдена.");
+      const actor = await fromUuid(record.rows[command.row].actorUuid);
+      if (!receipt.user?.isGM && !owns(receipt.user, actor)) throw new Error('Автор уведомления не владеет этой целью.');
+      // A player cannot edit a GM-authored message while the GM is offline.
+      // Publish the replacement as a new own message; the actor marker makes
+      // the previous revision obsolete for this target.
+      if (!game.user.isGM && receipt.user?.id !== game.user.id) { record.replacesReceipt = receipt.id; receipt = null; }
     } else {
       if (!snapshot.targets.length) throw new Error("При атаке не было отмеченных целей. Выбранные токены не используются. Отметьте цели и сделайте новый бросок.");
-      record = { source: source.id, index: command.index, revision: 0, mode: command.mode, hasCritical: attack.critDamage.length > 0, rows: [] };
+      record = { source: source.id, index: command.index, applicationId: request.id, revision: 0, mode: command.mode, hasCritical: attack.critDamage.length > 0, rows: [] };
       const seen = new Set();
       for (const uuid of snapshot.targets) {
         const token = await fromUuid(uuid), actor = token?.actor;
+        if (!owns(user, actor)) continue;
         if (!actor) { record.rows.push({ uuid, name: "Удалённая цель", error: "Токен или актёр больше не существует." }); continue; }
         // Two linked tokens can share the same HP document; do not damage it twice for one hit.
         if (seen.has(actor.uuid)) continue;
@@ -202,18 +229,25 @@ export async function processRequest(request) {
       }
       // Reserve the attack before any HP write. Recovery state lives on the source,
       // so only the completed receipt creates a chat message.
-      await source.setFlag(MODULE, `damageReceipts.${command.index}`, `pending:${request.id}`);
-      await source.setFlag(MODULE, `damagePending.${command.index}`, record);
+      if (!record.rows.length) { await request.delete(); return; }
     }
+    await storage.setFlag(MODULE, 'damageRequestHistory', [...history.slice(-99), request.id]);
+    if (!receipt) await storage.setFlag(MODULE, `damagePending.${storageKey}`, record);
     const indices = command.receipt ? [command.row] : record.rows.map((_, i) => i);
     for (const i of indices) {
       const row = record.rows[i];
       try {
         const actor = row.actorUuid ? await fromUuid(row.actorUuid) : null;
         if (!actor) throw new Error("Цель больше не существует; её ОЗ не изменены.");
+        if (!owns(user, actor)) { row.pending = true; row.error = 'Ожидает ГМ или владельца этого актёра.'; continue; }
+        if (row.pending) { row.before = health(actor); row.after = health(actor); row.traits = actorDefenses(actor); }
         const config = game.settings.get("pf1", "healthConfig");
         if (config?.variants?.[actor.type === "character" ? "pc" : "npc"]?.useWoundsAndVigor) throw new Error("Вариант ран и бодрости требует штатного расчёта PF1; ОЗ не изменены.");
         if (!sameHealth(health(actor), row.after)) throw new Error("ОЗ уже изменились после этого списания. Автоматическая замена отменена, чтобы сохранить последующее лечение или урон.");
+        if (row.result && record.applicationId) {
+          const marker = flag(actor, 'lastDamageReceipt');
+          if (marker?.id !== record.applicationId || marker.revision !== row.appliedRevision) throw new Error('После этого уведомления уже было другое списание. Используйте последнее уведомление.');
+        }
         const planned = templateWorkflow && !command.receipt
           ? (Array.isArray(templatePlan) ? templatePlan.find(p => p.uuid === row.uuid)
             : templatePlan?.[row.uuid] ?? foundry.utils.getProperty(templatePlan ?? {}, row.uuid)) : null;
@@ -228,22 +262,23 @@ export async function processRequest(request) {
         // On an interrupted write this is evidence for the GM, never a reason to apply it twice.
         record.inProgress = { row: i, before: row.after, after };
         if (receipt) await receipt.setFlag(MODULE, "damageReceipt", record);
-      else await source.setFlag(MODULE, `damagePending.${command.index}`, record);
-        if (gm()?.id !== game.user.id || !sameHealth(health(actor), row.after)) throw new Error("ОЗ или активный мастер изменились во время расчёта. Это списание не выполнено.");
-        await actor.update({ ...healthUpdate(after), [`flags.${MODULE}.lastDamageReceipt`]: { id: receipt?.id ?? request.id, revision: record.revision + 1 } });
-        row.after = after; row.result = result; row.error = null; row.mode = mode;
+      else await storage.setFlag(MODULE, `damagePending.${storageKey}`, record);
+        if (!canProcess(user) || !owns(user, actor) || !sameHealth(health(actor), row.after)) throw new Error("ОЗ, права или активный мастер изменились во время расчёта. Это списание не выполнено.");
+        await actor.update({ ...healthUpdate(after), [`flags.${MODULE}.lastDamageReceipt`]: { id: record.applicationId ?? receipt?.id ?? request.id, revision: record.revision + 1 } });
+        row.after = after; row.result = result; row.error = null; row.mode = mode; row.pending = false;
+        row.appliedRevision = record.revision + 1;
         if (["critical", "criticalHalf"].includes(mode)) row.basis = "critical";
       } catch (error) { row.error = error.message; }
       record.inProgress = null;
       if (receipt) await receipt.setFlag(MODULE, "damageReceipt", record);
-      else await source.setFlag(MODULE, `damagePending.${command.index}`, record);
+      else await storage.setFlag(MODULE, `damagePending.${storageKey}`, record);
     }
     record.mode = command.mode; record.revision++;
     if (receipt) await receipt.update({ content: receiptContent(record), [`flags.${MODULE}.damageReceipt`]: record });
     else {
-      receipt = await ChatMessage.create({ content: receiptContent(record), whisper: [...(source.whisper ?? [])], blind: Boolean(source.blind), flags: { [MODULE]: { damageReceipt: record } } });
-      await source.setFlag(MODULE, `damageReceipts.${command.index}`, receipt.id);
-      await source.unsetFlag(MODULE, `damagePending.${command.index}`);
+      receipt = await ChatMessage.create({ content: receiptContent(record), ...messageAudience(source, 'damageReceiptGMOnly'), flags: { [MODULE]: { damageReceipt: record } } });
+      await storage.setFlag(MODULE, `damageReceipts.${storageKey}`, receipt.id);
+      await storage.unsetFlag(MODULE, `damagePending.${storageKey}`);
     }
     await request.delete();
     return receipt;
@@ -255,6 +290,17 @@ export function queueDamageRequest(request) {
   const result = workQueue.catch(console.error).then(() => processRequest(request));
   workQueue = result; return result;
 }
+Hooks.on('updateUser', (document, change, options, userId) => {
+  if (game.system.id !== 'pf1' || gm()?.id !== game.user.id || document.id !== userId) return;
+  const commands = foundry.utils.getProperty(foundry.utils.expandObject(change), `flags.${MODULE}.damageRequests`);
+  for (const [id, command] of Object.entries(commands ?? {})) {
+    if (id.startsWith('-=') || !command) continue;
+    const user = game.users.find(u => u.id === userId);
+    queueDamageRequest({ id, user, getFlag: (m, k) => k === 'damageRequest' ? command : undefined,
+      delete: () => document.unsetFlag(MODULE, `damageRequests.${id}`),
+      update: async data => { await feedback(data.content.replace(/<[^>]*>/g, ''), game.messages.get(command.source)); await document.unsetFlag(MODULE, `damageRequests.${id}`); } });
+  }
+});
 // The server supplies userId for this document update. Never trust a sender ID
 // inside the flag payload. Existing authorization checks still run on the GM.
 Hooks.on("updateChatMessage", (source, change, options, userId) => {
@@ -270,10 +316,11 @@ Hooks.on("updateChatMessage", (source, change, options, userId) => {
   }
 });
 
-Hooks.on("renderChatMessage", (message, html) => {
+Hooks.on("renderChatMessage", async (message, html) => {
   if (game.system.id !== "pf1") return;
   const root = html[0] ?? html, receipt = flag(message, "damageReceipt"), snapshot = flag(message, "damageSnapshot");
   if (receipt) {
+    root.querySelectorAll('.pf1ru-damage-receipt > p.notes').forEach(note => note.remove());
     // Also enhance old receipts, without rewriting their saved HTML or HP.
     root.querySelectorAll('.pf1ru-damage-heading').forEach((heading, index) => {
       const picture = heading.querySelector('img, video');
@@ -303,7 +350,8 @@ Hooks.on("renderChatMessage", (message, html) => {
     });
     const source = game.messages.get(receipt.source);
     for (const button of root.querySelectorAll("[data-pf1ru-damage]")) {
-      button.hidden = !authorized(game.user, source);
+      button.hidden = !source || !authorized(game.user, message);
+      if (!game.user.isGM) { button.hidden = true; button.hidden = !source || !authorized(game.user, message) || !await ownsTargets(game.user, source, message, Number(button.dataset.row)); }
       button.addEventListener("click", () => {
         const mode = button.dataset.pf1ruDamage, row = Number(button.dataset.row);
         const execute = amount => requestDamage(source, receipt.index, mode, amount, message, row);
@@ -320,6 +368,7 @@ Hooks.on("renderChatMessage", (message, html) => {
   for (const container of root.querySelectorAll(".chat-attack[data-index]")) {
     const index = Number(container.dataset.index), attack = snapshot.attacks[index];
     if (!attack || attack.healing || !attack.damage.length) continue;
+    for (const button of container.querySelectorAll('[data-action="applyDamage"]')) button.hidden = false;
     // Capture before the PF1 jQuery delegate: never apply this same click to selected tokens.
     container.addEventListener("click", event => {
       const button = event.target.closest('[data-action="applyDamage"]');
