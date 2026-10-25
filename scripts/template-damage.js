@@ -2,6 +2,7 @@ import { MODULE, escapeHTML as esc } from './special-materials.js';
 import { focusToken, bindTokenHover } from './token-navigation.js';
 import { queueDamageRequest, messageAudience } from './damage-application.js';
 import { TEMPLATE_DEFAULTS, evasionFor, saveSuccess, successDamage, targetDamageMode, uniqueTemplateTargets } from './template-damage-rules.js';
+import { filterHeightTargets, templateHeight, heightLabel } from './template-elevation.js';
 const clone = value => foundry.utils.deepClone(value);
 const flag = (doc, key) => doc?.getFlag(MODULE, key);
 const gm = () => game.users.activeGM ?? game.users.find(u => u.active && u.isGM);
@@ -35,7 +36,7 @@ Hooks.on('pf1PreActionUse', use => {
       const positions = object.getHighlightLayer()?.positions;
       if (!positions || !(positions.size ?? positions.length)) return;
     }
-    use._pf1ruTemplateTargets = uniqueTemplateTargets(object.getTokensWithin());
+    use._pf1ruTemplateTargets = filterHeightTargets(uniqueTemplateTargets(object.getTokensWithin()), use);
   }
   catch (error) { use._pf1ruTemplateError = error.message; }
 });
@@ -51,11 +52,11 @@ export function resolveTemplateTargets(use) {
     // scene, not the viewer's current scene, and do not read the canvas again.
     const sceneUUID = template.parent?.uuid ?? template.uuid?.split('.MeasuredTemplate.')[0];
     if (!sceneUUID) throw new Error('Не удалось определить сцену шаблона.');
-    return [...new Set(metadata.targets.map(id => `${sceneUUID}.Token.${id}`))];
+    return filterHeightTargets([...new Set(metadata.targets.map(id => `${sceneUUID}.Token.${id}`))], use);
   }
   // An early drawing error is transient: retry once the action is ready instead
   // of making that old error permanent. Only a current failure is reported.
-  return uniqueTemplateTargets(template.object.getTokensWithin());
+  return filterHeightTargets(uniqueTemplateTargets(template.object.getTokensWithin()), use);
 }
 // PF1 has already placed the template and rolled damage at this point. Capture its
 // own occupied-cell result now, never the caster's selected or targeted tokens.
@@ -66,7 +67,7 @@ Hooks.on('pf1PreDisplayActionUse', use => {
   const template = use.shared.template, metadata = nativeMetadata(use);
   const data = { template: template.uuid, targets: [], saveType: use.shared.save || metadata?.save?.type || use.action.data.save?.type || '',
     dc: Number(use.shared.saveDC ?? metadata?.save?.dc), successMode: successDamage(use.action.data.save?.description, setting('templateSuccessDamage')),
-    name: use.item.name, createdAt: Date.now() };
+    name: use.item.name, height: templateHeight(use), createdAt: Date.now() };
   snapshot.templateWorkflowSource = true;
   use.shared.chatData[`flags.${MODULE}.damageSnapshot`] = snapshot;
   try {
@@ -80,6 +81,7 @@ export function cardContent(state) {
   const controls = state.status === 'review';
   const select = (name, value, options, row = '') => `<select data-template-field="${name}" data-row="${row}">${Object.entries(options).map(([key, label]) => `<option value="${key}" ${key === value ? 'selected' : ''}>${label}</option>`).join('')}</select>`;
   return `<section class="pf1ru-template-card"><h3>Цели шаблона: ${esc(state.name)}</h3>
+    ${state.height ? `<p>Высоты: ${esc(heightLabel(state.height))}</p>` : ''}
     <p>${state.saveType ? `${esc(saveNames[state.saveType] ?? state.saveType)} · СЛ ${esc(state.dc)}` : 'Без испытания: полный урон'} · Исходный урон: ${state.damageTotal}</p>
     ${state.saveType && controls ? `<label>При успехе ${select('successMode', state.successMode, { half: 'Половина', none: 'Без урона', full: 'Полный' })}</label>` : ''}
     ${state.rows.map((row, i) => `<div class="pf1ru-template-row">
@@ -165,7 +167,7 @@ export async function createTemplateCards(source, { resume = false } = {}) {
     if (attack.healing || !attack.damage.length || flag(source, 'templateCards')?.[index]) continue;
     await source.setFlag(MODULE, `templateCards.${index}`, 'pending');
     try {
-      const state = { source: source.id, sourceIndex: index, template: data.template, name: data.name, status: 'review', revision: 0,
+      const state = { source: source.id, sourceIndex: index, template: data.template, name: data.name, height: data.height ?? null, status: 'review', revision: 0,
         saveType: data.saveType ?? '', dc: data.dc, successMode: data.successMode ?? 'half', rows: [], error: data.error ?? null,
         autoSaves: setting('templateAutoSaves'), autoDamage: !resume && setting('templateAutoDamage'), allowExclusions: setting('templateExcludeTargets'),
         damageTotal: attack.damage.reduce((n, r) => n + Number(r.total), 0) };

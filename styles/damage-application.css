@@ -37,3 +37,7 @@
 .pf1ru-base-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 6px 0; }
 .pf1ru-base-stats input, input.pf1ru-base-inline { width: 100%; min-width: 0; }
 .pf1ru-save-notes { margin: 4px 0; }
+.pf1ru-template-height .pf1ru-height-inputs { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.pf1ru-template-height .pf1ru-height-inputs input { width: 0; min-width: 0; flex: 1; }
+.pf1ru-template-height .pf1ru-height-range[hidden] { display: none; }
+.pf1ru-template-height select { min-width: 0; width: 100%; }
