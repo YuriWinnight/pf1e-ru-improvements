@@ -1,6 +1,7 @@
 // Load roll modifiers through an established entry point as well: a running
 // Foundry server may still serve the manifest from before this file was added.
 import "./silver-weapon-damage.js";
+import { spellResistanceSource, checkSpellResistance, resistanceLabel } from './spell-resistance.js';
 import { MODULE, ALIGNMENTS, materialConfig, escapeHTML as esc } from "./special-materials.js";
 import { MATERIALS } from "./special-materials-data.js";
 import { calculateDamage, componentsFromRolls, applyToHealth } from "./damage-rules.js";
@@ -53,6 +54,7 @@ export function snapshotAction(use) {
   return {
     version: 1, actor: use.actor.uuid,
     targets: Array.from(game.user.targets).map(t => t.document.uuid),
+    spell: spellResistanceSource(use),
     attacks: use.shared.chatAttacks.map(atk => {
       const ammo = atk.ammo?.id ? use.actor.items.get(atk.ammo.id) : null;
       const ammoAlign = flag(ammo, "alignments") ?? {};
@@ -253,7 +255,9 @@ export async function processRequest(request) {
             : templatePlan?.[row.uuid] ?? foundry.utils.getProperty(templatePlan ?? {}, row.uuid)) : null;
         if (templateWorkflow && !command.receipt && !["full", "half", "none"].includes(planned?.mode)) throw new Error("Для цели не подтверждена доля урона.");
         const mode = planned?.mode ?? (command.mode === "half" && row.basis === "critical" ? "criticalHalf" : command.mode);
-        const result = resultFor(attack, row.traits, mode, command.amount);
+        const resistance = !['manual', 'undo'].includes(mode) ? await checkSpellResistance(source, row.uuid) : null;
+        const result = resultFor(attack, row.traits, resistance?.success === false ? 'none' : mode, command.amount);
+        if (resistance && !resistance.skipped) result.details.unshift(resistanceLabel(resistance));
         if (planned?.note) result.details.unshift(planned.note);
         const after = command.mode === "undo" ? clone(row.before) : applyToHealth(row.before, result);
         if (mode === "undo") result.details.push("Восстановлены ОЗ, временные ОЗ и нелетальный урон до этого списания.");

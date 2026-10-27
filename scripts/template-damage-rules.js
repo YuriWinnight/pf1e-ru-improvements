@@ -38,6 +38,8 @@ export function successDamage(description, fallback = 'half') {
 }
 export function targetDamageMode(plan, row) {
   if (row.excluded) return 'excluded';
+  if (row.resistanceError) return null;
+  if (row.resistance?.success === false) return 'none';
   if (['full', 'half', 'none'].includes(row.override)) return row.override;
   if (!plan.saveType) return 'full';
   if (typeof row.save?.success !== 'boolean') return null;

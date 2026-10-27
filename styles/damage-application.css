@@ -30,6 +30,15 @@
 .pf1ru-template-error { color: #b32020; }
 .pf1ru-template-card .pf1ru-save-success { color: #167029; }
 .pf1ru-template-card .pf1ru-save-failure { color: #b32020; }
+.pf1ru-cl-check .pf1ru-save-success { color: #167029; }
+.pf1ru-cl-check .pf1ru-save-failure { color: #b32020; }
+.pf1ru-template-card .pf1ru-cl-check { border-top: 1px solid #7776; margin-top: 10px; padding-top: 8px; }
+.pf1ru-cl-check > h4 { font-weight: bold; margin: 0 0 5px; }
+.pf1ru-cl-heading { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.pf1ru-cl-heading h3 { flex: 1; min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.pf1ru-cl-message button.pf1ru-cl-token { flex: 0 0 40px; width: 40px; height: 40px; padding: 0; margin: 0; border: 0; background: transparent; cursor: pointer; }
+.pf1ru-cl-token img, .pf1ru-cl-token video { display: block; width: 100%; height: 100%; object-fit: contain; border: 0; }
+.pf1ru-cl-check .property-group { margin: 6px 0; }
 .pf1ru-template-card button.pf1ru-template-token { flex: 0 0 36px; width: 36px; height: 36px; padding: 0; margin: 0; border: 0; background: transparent; cursor: pointer; line-height: 1; }
 .pf1ru-template-token img { display: block; }
 .pf1ru-damage-heading button.pf1ru-damage-token { flex: 0 0 44px; width: 44px; height: 44px; padding: 0; margin: 0; border: 0; background: transparent; cursor: pointer; }

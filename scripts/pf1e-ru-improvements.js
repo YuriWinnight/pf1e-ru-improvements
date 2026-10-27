@@ -1,3 +1,5 @@
+import { updateSkillJournal, skillJournalAliases, installSkillJournalCompatibility } from './skill-journal-updates.js';
+
 const MODULE_ID = "pf1e-ru-improvements";
 const RULES_PACK_ID = `${MODULE_ID}.rules`;
 const SKILLS_JOURNAL_ID = "RuSkillsJournal1";
@@ -1383,6 +1385,7 @@ async function collectCompendiumReferences() {
     return;
   }
 
+  installSkillJournalCompatibility(pack);
   let [skillsJournal, conditionsJournal, fearJournal] = await Promise.all([
     pack.getDocument(SKILLS_JOURNAL_ID),
     pack.getDocument(CONDITIONS_JOURNAL_ID),
@@ -1392,8 +1395,9 @@ async function collectCompendiumReferences() {
     fearJournal = await ensureFearRulesWorldJournal();
   }
 
+  updateSkillJournal(skillsJournal);
   for (const page of skillsJournal?.pages ?? []) {
-    journalReferences.skills.set(normalizeLabel(page.name), page.uuid);
+    for (const alias of skillJournalAliases(page.name)) journalReferences.skills.set(normalizeLabel(alias), page.uuid);
   }
 
   for (const page of conditionsJournal?.pages ?? []) {
@@ -1416,7 +1420,7 @@ async function collectCompendiumReferences() {
   }
 
   console.info(
-    `${MODULE_ID} | Загружено страниц навыков: ${journalReferences.skills.size}; состояний: ${journalReferences.conditions.size}.`
+    `${MODULE_ID} | Загружено страниц навыков: ${skillsJournal?.pages?.size ?? 0}; состояний: ${journalReferences.conditions.size}.`
   );
 }
 

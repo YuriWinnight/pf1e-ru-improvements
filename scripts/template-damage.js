@@ -3,6 +3,7 @@ import { focusToken, bindTokenHover } from './token-navigation.js';
 import { queueDamageRequest, messageAudience } from './damage-application.js';
 import { TEMPLATE_DEFAULTS, evasionFor, saveSuccess, successDamage, targetDamageMode, uniqueTemplateTargets } from './template-damage-rules.js';
 import { filterHeightTargets, templateHeight, heightLabel } from './template-elevation.js';
+import { checkSpellResistance, resistanceRollContent } from './spell-resistance.js';
 const clone = value => foundry.utils.deepClone(value);
 const flag = (doc, key) => doc?.getFlag(MODULE, key);
 const gm = () => game.users.activeGM ?? game.users.find(u => u.active && u.isGM);
@@ -86,9 +87,11 @@ export function cardContent(state) {
     ${state.saveType && controls ? `<label>При успехе ${select('successMode', state.successMode, { half: 'Половина', none: 'Без урона', full: 'Полный' })}</label>` : ''}
     ${state.rows.map((row, i) => `<div class="pf1ru-template-row">
       <div class="pf1ru-template-actor">${state.allowExclusions && controls ? `<input type="checkbox" data-template-field="included" data-row="${i}" ${row.excluded ? '' : 'checked'} title="Включить цель">` : ''}<button type="button" class="pf1ru-template-token" data-template-token="${i}" title="Найти токен: ${esc(row.name)}" aria-label="Найти токен: ${esc(row.name)}"><img src="${esc(row.img || 'icons/svg/mystery-man.svg')}" alt=""></button><strong>${esc(row.name)}</strong></div>
-      <div>${row.save ? `Испытание: ${row.save.total == null ? 'решение мастера' : esc(row.save.total)}${row.save.natural != null ? ` (d20: ${esc(row.save.natural)})` : ''} — <strong class="pf1ru-save-${row.save.success ? 'success' : 'failure'}">${saveLabel(row.save)}</strong>${row.save.manual ? ' · исправлено мастером' : ''}` : state.saveType ? 'Испытание ещё не выполнено' : 'Испытание не требуется'}</div>
+      <div>${row.resistance?.success === false ? 'Испытание не требуется: УкМ не преодолена' : row.save ? `Испытание: ${row.save.total == null ? 'решение мастера' : esc(row.save.total)}${row.save.natural != null ? ` (d20: ${esc(row.save.natural)})` : ''} — <strong class="pf1ru-save-${row.save.success ? 'success' : 'failure'}">${saveLabel(row.save)}</strong>${row.save.manual ? ' · исправлено мастером' : ''}` : state.saveType ? 'Испытание ещё не выполнено' : 'Испытание не требуется'}</div>
+      ${row.resistanceError ? `<p class="pf1ru-template-error">${esc(row.resistanceError)}</p>` : ''}
       ${row.evasion?.note && state.saveType === 'ref' && state.successMode === 'half' ? `<div class="notes">${esc(row.evasion.note)}</div>` : ''}
       ${row.notes ? `<div class="pf1ru-save-notes"><strong>Примечания</strong>${row.notes}</div>` : ''}
+      ${resistanceRollContent(row.resistance)}
       <div>${esc(damageNames[targetDamageMode(state, row)] ?? 'Ожидает испытания')}</div>
       ${row.error ? `<p class="pf1ru-template-error">${esc(row.error)}</p>` : ''}
       ${controls ? `<div class="pf1ru-template-row-controls">${state.saveType ? `<button type="button" data-template-action="roll" data-row="${i}" ${row.excluded ? 'disabled' : ''}><i class="fas fa-dice-d20"></i> ${row.save ? 'Перебросить' : 'Испытание'}</button><button type="button" data-template-action="edit" data-row="${i}"><i class="fas fa-edit"></i> Исправить</button>` : ''}${select('override', row.override ?? '', { '': 'По результату', full: 'Полный урон', half: 'Половина', none: 'Без урона' }, i)}</div>` : ''}
@@ -104,13 +107,19 @@ function saveLabel(save) {
   if (!save.manual && save.natural === 1) return 'Критический провал';
   return save.success ? 'Успех' : 'Провал';
 }
-async function saveCard(card, state) { await card.update({ content: cardContent(state), [`flags.${MODULE}.templateWorkflow`]: state }); }
+function resistanceMessageData(state) {
+  const rolls = state.rows.flatMap(row => row.resistance?.roll ? [row.resistance.roll] : []);
+  return rolls.length ? { type: globalThis.CONST?.CHAT_MESSAGE_TYPES?.ROLL ?? 5, rolls, 'flags.pf1.noRollRender': true } : {};
+}
+async function saveCard(card, state) { await card.update({ content: cardContent(state), ...resistanceMessageData(state), [`flags.${MODULE}.templateWorkflow`]: state }); }
 async function saveNotes(actor, type) {
   if (!type || !actor.getContextNotesParsed) return '';
   const notes = actor.getContextNotesParsed(`savingThrow.${type}`, { roll: false });
   return TextEditor.enrichHTML(notes.map(note => `<div>${note}</div>`).join(''), { async: true, rolls: false, secrets: game.settings.get(MODULE, 'templateSavesGMOnly') === true });
 }
 export async function rollTemplateSave(state, row) {
+  await rollResistance(state, row);
+  if (row.resistance?.success === false) return;
   const actor = await fromUuid(row.actorUuid), token = await fromUuid(row.uuid);
   if (!actor) throw new Error('Актёр больше не существует.');
   row.notes = await saveNotes(actor, state.saveType);
@@ -133,12 +142,25 @@ export async function rollTemplateSave(state, row) {
   row.evasion = evasionFor(actor); row.error = null;
 }
 async function rollMissing(state) {
+  await checkResistances(state);
   if (!state.saveType) return;
-  for (const row of state.rows) if (!row.excluded && !row.save && !row.override) {
+  for (const row of state.rows) if (!row.excluded && !row.save && !row.override && !row.resistanceError && row.resistance?.success !== false) {
     try { await rollTemplateSave(state, row); } catch (error) { row.error = error.message; }
   }
 }
+async function rollResistance(state, row) {
+  try {
+    row.resistance = await checkSpellResistance(game.messages.get(state.source), row.uuid);
+    row.resistanceError = null;
+  } catch (error) { row.resistanceError = error.message; throw error; }
+}
+async function checkResistances(state) {
+  for (const row of state.rows) if (!row.excluded) {
+    try { await rollResistance(state, row); } catch { /* Retain the row error and block damage until resolved. */ }
+  }
+}
 async function applyTemplateDamage(card, state) {
+  await checkResistances(state);
   if (state.autoSaves) await rollMissing(state);
   const included = state.rows.filter(r => !r.excluded);
   if (!included.length) throw new Error('Не выбрано ни одной цели.');
@@ -178,9 +200,11 @@ export async function createTemplateCards(source, { resume = false } = {}) {
         seen.add(actor.uuid); state.rows.push({ uuid, actorUuid: actor.uuid, name: token.name, img: /\.(webm|mp4)(?:[?#]|$)/i.test(token.texture?.src ?? '') ? actor.img : token.texture?.src ?? actor.img,
           excluded: false, save: null, override: '', evasion: evasionFor(actor), notes: await saveNotes(actor, state.saveType) });
       }
+      if (!state.error) await checkResistances(state);
       if (state.autoSaves && !state.error) await rollMissing(state);
       // A private GM list avoids exposing hidden tokens and NPC saves to players.
       const card = await ChatMessage.create({ content: cardContent(state), ...messageAudience(source, 'templateSavesGMOnly'),
+        ...resistanceMessageData(state),
         flags: { [MODULE]: { templateWorkflow: state, damageSnapshot: { version: 1, actor: snapshot.actor, targets: state.rows.map(r => r.uuid), attacks: [clone(attack)] } } } });
       await source.setFlag(MODULE, `templateCards.${index}`, card.id);
       if (state.autoDamage && !state.allowExclusions && state.rows.length && !state.error && state.rows.every(r => targetDamageMode(state, r))) await applyTemplateDamage(card, state);
