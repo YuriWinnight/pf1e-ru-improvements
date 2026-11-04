@@ -1,8 +1,21 @@
 import { MODULE, materialConfig, initialMaterialConfig } from './special-materials.js';
 const fields = { price: ['Цена', 'system.price'], weight: ['Вес', 'system.weight.value'], hp: ['ПП', 'system.hp.max'], hardness: ['Твёрдость', 'system.hardness'] };
 const get = (item, path) => foundry.utils.getProperty(item._source, path);
+const baseValue = (item, key) => materialConfig(item).enabled ? initialMaterialConfig(item).base[key] : Number(get(item, fields[key][1]));
+export function parseBaseInput(text, current) {
+  const value = String(text).trim().replace(/^−/, '-').replace(',', '.').replace(/^([+-])\s+/, '$1');
+  if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value))
+    throw new Error('Введите число, +число для прибавки или -число для вычитания.');
+  const relative = /^[+-]/.test(value);
+  const next = relative ? Number(current) + Number(value) : Number(value);
+  if (!Number.isFinite(next)) throw new Error('Введите конечное числовое значение.');
+  if (next < 0) return 0;
+  // Avoid displaying floating-point tails for ordinary decimal adjustments.
+  return relative ? Number(next.toPrecision(15)) : next;
+}
 export async function updateMaterialBase(item, key, value) {
   if (!fields[key] || !Number.isFinite(value) || value < 0) throw new Error('Введите неотрицательное число.');
+  if (!materialConfig(item).enabled) return item.update({ [fields[key][1]]: value });
   const config = initialMaterialConfig(item); config.base[key] = value;
   if (key !== 'price') config.manual[key] = null;
   await item.update({ [`flags.${MODULE}.material`]: config });
@@ -10,24 +23,30 @@ export async function updateMaterialBase(item, key, value) {
 function bind(input, item, key, editable, display = null) {
   if (input.dataset.pf1ruBase) return;
   input.dataset.pf1ruBase = key; input.removeAttribute('name'); input.readOnly = !editable;
-  const restore = () => { input.value = display?.() ?? get(item, fields[key][1]); };
-  const tip = `Без материала, усиления, искусной работы и иных эффектов: ${initialMaterialConfig(item).base[key]}. При редактировании вводится базовое значение одного предмета.`;
-  input.removeAttribute('title'); input.dataset.tooltip = tip;
-  input.addEventListener('focus', () => { if (editable) { input.value = initialMaterialConfig(item).base[key]; input.select(); } });
+  // Number inputs sanitize a leading '+' before our change handler can read it.
+  input.type = 'text'; input.inputMode = 'decimal'; input.removeAttribute('min'); input.removeAttribute('step');
+  const restore = () => {
+    input.value = display?.() ?? get(item, fields[key][1]);
+  };
+  input.removeAttribute('title'); input.removeAttribute('data-tooltip'); restore();
+  input.addEventListener('focus', () => { if (editable) { input.value = baseValue(item, key); input.select(); } });
   input.addEventListener('change', async event => {
     event.stopImmediatePropagation(); if (!editable) return;
-    const value = input.value.trim() === '' ? NaN : Number(input.value);
-    try { await updateMaterialBase(item, key, value); } catch (error) { ui.notifications.warn(error.message); }
+    try {
+      const value = parseBaseInput(input.value, baseValue(item, key));
+      await updateMaterialBase(item, key, value);
+    } catch (error) { ui.notifications.warn(error.message); }
     restore();
   }, true);
   input.addEventListener('blur', restore);
   input.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); input.blur(); } });
   const native = input.closest('[data-action="input-text"]');
+  native?.removeAttribute('title'); native?.removeAttribute('data-tooltip');
   native?.addEventListener('click', event => { event.stopImmediatePropagation(); if (editable) { input.focus(); } }, true);
 }
 Hooks.on('renderItemSheet', (app, html) => {
   const item = app.item ?? app.object, root = html[0] ?? html;
-  if (game.system.id !== 'pf1' || !materialConfig(item).enabled) return;
+  if (game.system.id !== 'pf1' || !item?._source?.system) return;
   for (const [key, [, path]] of Object.entries(fields)) {
     for (const input of root.querySelectorAll(`input[name="${path}"], [data-attr-name="${path}"] input`)) bind(input, item, key, Boolean(app.isEditable));
   }
@@ -39,6 +58,9 @@ Hooks.on('renderActorSheet', (app, html) => {
   observers.get(app)?.disconnect();
   const decorate = () => {
     for (const row of root.querySelectorAll('.item[data-item-id]')) {
+      for (const cell of row.querySelectorAll('.item-value, .item-weight, .item-value [title], .item-value [data-tooltip], .item-weight [title], .item-weight [data-tooltip]')) {
+        cell.removeAttribute('title'); cell.removeAttribute('data-tooltip');
+      }
       const item = actor.items.get(row.dataset.itemId);
       if (!materialConfig(item).enabled || (!game.user.isGM && item.system.identified === false)) continue;
       const editable = Boolean(app.isEditable);

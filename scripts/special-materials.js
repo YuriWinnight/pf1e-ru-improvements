@@ -73,8 +73,7 @@ Hooks.on("renderItemSheet", (app, html) => {
   renderOtherEffects(item,app,group);
   if (materialConfig(item).enabled) {
     for (const input of root.querySelectorAll('[name="system.price"], [data-attr-name="system.price"], .price-description-input')) {
-      const tip = `Исходная цена без материала, усиления, искусной работы и иных эффектов: ${config.base.price} зм`;
-      input.removeAttribute('title'); input.dataset.tooltip = tip;
+      input.removeAttribute('title'); input.removeAttribute('data-tooltip');
     }
     if (equipmentStats(config, item._source.system, item.type, enhancement(item)).priceUnknown)
       group.querySelector(".pf1ru-material-help").append(" Для этого типа предмета надбавка материала не указана: используется базовая цена с учётом выбранной искусной работы и усиления.");
