@@ -1,4 +1,5 @@
 import { MODULE, escapeHTML as esc } from './special-materials.js';
+import './template-targets.js';
 import { focusToken, bindTokenHover } from './token-navigation.js';
 import { queueDamageRequest, messageAudience } from './damage-application.js';
 import { TEMPLATE_DEFAULTS, evasionFor, saveSuccess, successDamage, targetDamageMode, uniqueTemplateTargets } from './template-damage-rules.js';
@@ -28,7 +29,7 @@ Hooks.on('init', () => {
 });
 // Freeze occupied cells as soon as PF1 confirms placement, before dice animations.
 Hooks.on('pf1PreActionUse', use => {
-  if (game.system.id !== 'pf1' || !setting('templateDamageEnabled') || !use.shared.template) return;
+  if (game.system.id !== 'pf1' || !use.shared.template) return;
   try {
     const object = use.shared.template.object;
     // A freshly created document can precede its grid highlight layer. An empty
@@ -62,21 +63,22 @@ export function resolveTemplateTargets(use) {
 // PF1 has already placed the template and rolled damage at this point. Capture its
 // own occupied-cell result now, never the caster's selected or targeted tokens.
 Hooks.on('pf1PreDisplayActionUse', use => {
-  if (game.system.id !== 'pf1' || !setting('templateDamageEnabled') || !use.shared.template || use.shared.templateData?.spellFailureSuccess === false) return;
+  if (game.system.id !== 'pf1' || !use.shared.template || use.shared.templateData?.spellFailureSuccess === false) return;
   const snapshot = use._pf1ruDamageSnapshot ?? foundry.utils.getProperty(foundry.utils.expandObject(use.shared.chatData), `flags.${MODULE}.damageSnapshot`);
   if (!snapshot?.attacks?.some(a => !a.healing && a.damage.length)) return;
   const template = use.shared.template, metadata = nativeMetadata(use);
   const data = { template: template.uuid, targets: [], saveType: use.shared.save || metadata?.save?.type || use.action.data.save?.type || '',
     dc: Number(use.shared.saveDC ?? metadata?.save?.dc), successMode: successDamage(use.action.data.save?.description, setting('templateSuccessDamage')),
     name: use.item.name, height: templateHeight(use), createdAt: Date.now() };
-  snapshot.templateWorkflowSource = true;
+  snapshot.templateWorkflowSource = Boolean(setting('templateDamageEnabled'));
   use.shared.chatData[`flags.${MODULE}.damageSnapshot`] = snapshot;
   try {
     data.targets = resolveTemplateTargets(use);
+    snapshot.targets = [...data.targets];
   } catch (error) {
     data.error = 'Не удалось определить цели шаблона: ' + error.message;
   }
-  use.shared.chatData[`flags.${MODULE}.templateSource`] = data;
+  if (setting('templateDamageEnabled')) use.shared.chatData[`flags.${MODULE}.templateSource`] = data;
 });
 export function cardContent(state) {
   const controls = state.status === 'review';

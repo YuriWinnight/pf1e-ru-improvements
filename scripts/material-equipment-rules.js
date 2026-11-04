@@ -1,4 +1,5 @@
 import { MATERIALS, materialStats } from "./special-materials-data.js";
+import { applyEffectDeltas, effectTotals } from './other-effects-rules.js';
 const armor = ["lightArmor", "mediumArmor", "heavyArmor"], weapons = ["weapon", "ammo"];
 // Prices are from the user's SPECIAL MATERIAL descriptions, not finished items.
 export const EQUIPMENT_MATERIALS = {
@@ -43,6 +44,10 @@ export function availableMaterials(type, system) {
 export function equipmentStats(config, system, type, enhancement) {
   const kind = gearKind(type, system), rule = EQUIPMENT_MATERIALS[config.id] ?? {};
   const base = config.base, enh = Math.max(0, Number(enhancement) || 0), isArmor = type === "equipment";
+  // Special properties contribute only to the price-equivalent bonus. Never
+  // pass them to materialStats or store them in PF1's actual enhancement field.
+  const equivalent = Math.max(0, effectTotals(config.otherEffects, isArmor).enhancement);
+  const priceEnhancement = enh + equivalent;
   const stats = materialStats(base, config.id, enh, isArmor);
   for (const key of ["hp", "hardness", "weight"]) {
     const n = config.manual?.[key];
@@ -61,11 +66,12 @@ export function equipmentStats(config, system, type, enhancement) {
   stats.priceUnknown = surcharge == null;
   if (Number.isFinite(config.materialPrice)) { surcharge = config.materialPrice; stats.priceUnknown = false; }
   const mw = stats.masterwork && (!rule.masterwork || rule.separateMasterwork) ? mwPrice : 0;
-  const magic = enh ** 2 * (isArmor ? 1000 : 2000) / (kind === "ammo" ? 50 : 1);
+  const priceFactor = (isArmor ? 1000 : 2000) / (kind === "ammo" ? 50 : 1);
+  const magic = priceEnhancement ** 2 * priceFactor;
   // Cold iron's one-time magic surcharge is part of the price, not a cumulative update.
-  const specialMagic = config.id === "cold-iron" && enh > 0 ? 2000 / (kind === "ammo" ? 50 : 1) : 0;
+  const specialMagic = config.id === "cold-iron" && priceEnhancement > 0 ? 2000 / (kind === "ammo" ? 50 : 1) : 0;
   stats.price = Math.round((base.price + (surcharge ?? 0) + mw + magic + specialMagic) * 100) / 100;
-  stats.priceParts = { base: base.price, material: surcharge ?? 0, masterwork: mw, enhancement: magic, specialMagic };
+  stats.priceParts = { base: base.price, material: surcharge ?? 0, masterwork: mw, enhancement: enh ** 2 * priceFactor, effectEnhancement: magic - enh ** 2 * priceFactor, specialMagic };
   if (isArmor) {
     const materialReduction = kind === "shield" ? (rule.shieldAcp ?? rule.acp ?? 0) : rule.acp ?? 0;
     const reduction = Math.max(rule.masterwork ? 1 : 0, materialReduction) + (stats.masterwork && !rule.masterwork ? 1 : 0);
@@ -74,5 +80,8 @@ export function equipmentStats(config, system, type, enhancement) {
     stats.spellFailure = Math.min(100, Math.max(Math.min(base.spellFailure ?? 0, rule.minAsf ?? 0), (base.spellFailure ?? 0) + (rule.asf ?? 0)));
     stats.ac = base.ac ?? 0; // Enhancement AC is already added by PF1, never add it twice here.
   }
-  return stats;
+  if (!config.otherEffects?.length) return stats;
+  const result=applyEffectDeltas(stats,config.otherEffects,isArmor);
+  result.priceParts={...stats.priceParts,otherEffects:result.price-stats.price};
+  return result;
 }

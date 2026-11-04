@@ -11,8 +11,8 @@ function bind(input, item, key, editable, display = null) {
   if (input.dataset.pf1ruBase) return;
   input.dataset.pf1ruBase = key; input.removeAttribute('name'); input.readOnly = !editable;
   const restore = () => { input.value = display?.() ?? get(item, fields[key][1]); };
-  const tip = `Без материала, усиления и искусной работы: ${initialMaterialConfig(item).base[key]}. При редактировании вводится базовое значение одного предмета.`;
-  input.title = tip; input.dataset.tooltip = tip;
+  const tip = `Без материала, усиления, искусной работы и иных эффектов: ${initialMaterialConfig(item).base[key]}. При редактировании вводится базовое значение одного предмета.`;
+  input.removeAttribute('title'); input.dataset.tooltip = tip;
   input.addEventListener('focus', () => { if (editable) { input.value = initialMaterialConfig(item).base[key]; input.select(); } });
   input.addEventListener('change', async event => {
     event.stopImmediatePropagation(); if (!editable) return;

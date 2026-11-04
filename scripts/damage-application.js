@@ -195,7 +195,6 @@ export async function processRequest(request) {
   try {
     if (!authorized(user, command.receipt ? game.messages.get(command.receipt) : source) || !snapshot || !Object.hasOwn(modes, command.mode)) throw new Error("Нет доступа к этой атаке.");
     if (!Number.isInteger(command.index) || !snapshot.attacks[command.index]) throw new Error("Атака не найдена.");
-    if (snapshot.templateWorkflowSource) throw new Error("Для урона шаблона используйте список целей в чате мастера.");
     if (!await ownsTargets(user, source, command.receipt ? game.messages.get(command.receipt) : null, command.row)) { await request.delete(); return; }
     const templateWorkflow = flag(source, "templateWorkflow"), templatePlan = flag(source, "templateDamagePlan");
     if (templateWorkflow && (!source.user?.isGM || (!command.receipt && templateWorkflow.status !== "applying"))) throw new Error("Список целей ещё не подтверждён или уже обработан.");
@@ -365,10 +364,6 @@ Hooks.on("renderChatMessage", async (message, html) => {
     return;
   }
   if (!snapshot) return;
-  if (snapshot.templateWorkflowSource) {
-    root.querySelectorAll('[data-action="applyDamage"]').forEach(button => button.remove());
-    return;
-  }
   for (const container of root.querySelectorAll(".chat-attack[data-index]")) {
     const index = Number(container.dataset.index), attack = snapshot.attacks[index];
     if (!attack || attack.healing || !attack.damage.length) continue;

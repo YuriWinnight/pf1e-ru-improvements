@@ -1,0 +1,31 @@
+.sheet.actor .inventory-filters .currency.pf1ru-currency { display:flex; flex-wrap:wrap; justify-content:flex-start; align-items:center; gap:6px; opacity:1; margin:2px 0; }
+.sheet.actor .inventory-filters .currency.pf1ru-currency h3 { flex:0 0 160px; margin:0; }
+.sheet.actor .inventory-filters .currency.pf1ru-currency .pf1ru-coin { display:flex; align-items:center; flex:0 0 auto; gap:3px; background:transparent; border:0; padding:0; list-style:none; }
+.sheet.actor .inventory-filters .currency.pf1ru-currency label.denomination { display:flex; align-items:center; gap:3px; flex:0 0 auto; margin:0; line-height:normal; }
+.sheet.actor .inventory-filters .currency.pf1ru-currency label.denomination .pf1ru-coin-name { flex:0 0 auto; margin:0; font-size:inherit; }
+.sheet.actor .inventory-filters .currency.pf1ru-currency label.denomination::before { display:none; }
+.sheet.actor .inventory-filters .currency.pf1ru-currency label.denomination img { width:22px; height:22px; object-fit:contain; border:0; }
+.sheet.actor .inventory-filters .currency.pf1ru-currency .pf1ru-coin > input,
+.sheet.actor .inventory-filters .currency.pf1ru-currency .pf1ru-coin > .text-box { flex:0 0 54px; width:54px; min-width:0; margin:0; border:1px solid var(--color-border-light-tertiary, #7a7971); border-radius:3px; background:rgba(0,0,0,0.05); height:24px; line-height:22px; text-align:center; padding:0 3px; }
+.sheet.actor .inventory-filters .currency.pf1ru-currency .convert-currency { flex:0 0 12px; margin-left:0; }
+.sheet.actor .inventory-filters .currency.pf1ru-currency .pf1ru-currency-controls { display:flex; flex:0 0 auto; gap:3px; list-style:none; }
+.sheet.actor .inventory-filters .currency.pf1ru-currency .pf1ru-currency-controls button { display:inline-flex; align-items:center; justify-content:center; width:32px; height:26px; padding:0; margin:0; line-height:24px; font-size:18px; font-weight:bold; color:inherit; background:transparent; border:0; border-radius:0; box-shadow:none; cursor:pointer; }
+.sheet.actor .inventory-filters .currency.pf1ru-currency .pf1ru-currency-controls button:hover { color:var(--color-text-hyperlink, #a34408); text-shadow:0 0 5px #efad67; box-shadow:none; }
+.sheet.actor .inventory-filters .currency.pf1ru-currency .pf1ru-currency-controls button:focus-visible { outline:1px dotted currentColor; }
+.window-app.pf1ru-inventory-currency-dialog { min-width:min(360px, calc(100vw - 24px)); min-height:240px; }
+.pf1ru-inventory-currency-dialog .window-content { font-size:16px; padding:12px; }
+.pf1ru-inventory-currency-dialog .dialog-buttons { gap:8px; flex:0 0 auto; }
+.pf1ru-inventory-currency-dialog .dialog-buttons button { min-height:34px; margin:0; white-space:nowrap; font-size:16px; }
+.pf1ru-currency-dialog .form-group { margin:6px 0; }
+.pf1ru-currency-dialog .form-group label { display:flex; align-items:center; gap:10px; flex:1; }
+.pf1ru-currency-dialog img { width:24px; height:24px; border:0; }
+.pf1ru-currency-dialog input { margin-left:auto; flex:0 1 72%; min-width:100px; height:30px; font-size:16px; }
+.pf1ru-currency-dialog .notes { font-size:14px; line-height:1.4; }
+
+/* Party Folder stash symbols: use the same geometric strokes, independent of sheet fonts. */
+.sheet.actor .inventory-filters .currency.pf1ru-currency .pf1ru-currency-controls .pf1ru-currency-symbol { position:relative; display:block; flex:0 0 .82rem; width:.82rem; height:.82rem; margin:0; padding:0; color:transparent; font-size:0; line-height:0; }
+.sheet.actor .inventory-filters .currency.pf1ru-currency .pf1ru-currency-symbol::before,
+.sheet.actor .inventory-filters .currency.pf1ru-currency .pf1ru-currency-plus::after { content:""; position:absolute; left:50%; right:auto; top:50%; bottom:auto; width:.62rem; height:2px; margin:0; background:var(--pf1ru-currency-symbol-color, #33291f); transform:translate(-50%, -50%); transform-origin:center; }
+.sheet.actor .inventory-filters .currency.pf1ru-currency .pf1ru-currency-plus::after { transform:translate(-50%, -50%) rotate(90deg); }
+.sheet.actor .inventory-filters .currency.pf1ru-currency .pf1ru-currency-symbol:not(.pf1ru-currency-plus)::before { width:.54rem; }
+.sheet.actor .inventory-filters .currency.pf1ru-currency .pf1ru-currency-controls button:hover { --pf1ru-currency-symbol-color:var(--color-text-hyperlink, #a34408); }

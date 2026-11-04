@@ -2638,13 +2638,13 @@ Hooks.once("init", () => {
 
 Hooks.once("setup", () => {
   installFoundry11CompatibilityShims();
-  migrateHealthEstimateActiveEffectRules();
   setTimeout(installFoundry11CompatibilityShims, 0);
 });
 Hooks.once("canvasInit", installFoundry11CompatibilityShims);
 
 Hooks.once("ready", async () => {
   installFoundry11CompatibilityShims();
+  migrateHealthEstimateActiveEffectRules();
   applyRussianTranslations();
   syncAthleticsChangeTarget();
   installAthleticsChangePicker();

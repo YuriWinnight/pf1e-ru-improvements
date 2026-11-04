@@ -153,6 +153,7 @@ export function installTemplateElevation() {
   wrap('pf1.actionUse.ActionUse.prototype.alterRollData', use, 'alterRollData', readHeightForm);
   wrap('pf1.actionUse.ActionUse.prototype.promptMeasureTemplate', use, 'promptMeasureTemplate', placeHeightTemplate);
   wrap('pf1.canvas.AbilityTemplate.fromData', globalThis.pf1?.canvas?.AbilityTemplate, 'fromData', stampHeightTemplate);
-  wrap('pf1.canvas.MeasuredTemplatePF.prototype.getTokensWithin', globalThis.pf1?.canvas?.MeasuredTemplatePF?.prototype, 'getTokensWithin', tokensWithinHeight);
+  // Geometry and the height filter share the single registration in
+  // template-targets.js. libWrapper rejects two registrations by one package.
 }
 Hooks.on('setup', installTemplateElevation);
