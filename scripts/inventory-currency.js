@@ -33,7 +33,7 @@ function currencyDialog(actor, category, subtract) {
     title: `${title}${category === 'altCurrency' ? ' — без веса' : ''}`,
     content: `<form class="pf1ru-currency-dialog">${Object.entries(COINS).map(([key, coin]) =>
       `<div class="form-group"><label><img src="modules/${MODULE}/assets/currency/${coin.file}" alt=""> ${coin.label.toUpperCase()}<input name="${key}" type="number" min="0" step="1" value="0"></label></div>`).join('')}
-      ${subtract ? '<p class="notes">Вычитается отдельно для каждого вида монет, без размена. Остаток не может быть меньше нуля.</p>' : ''}</form>`,
+      </form>`,
     buttons: {
       ok: { label: title, icon: `<i class="fas fa-${subtract ? 'minus' : 'plus'}"></i>`, callback: () => false },
       cancel: { label: 'Отмена' }
@@ -41,7 +41,10 @@ function currencyDialog(actor, category, subtract) {
     // Foundry 11 closes Dialog after a callback even when it returns false.
     // Handle submit ourselves so invalid input stays open and double clicks cannot charge twice.
     render(html) {
-      const root = html[0] ?? html, form = root.querySelector('form');
+      // Dialog.activateListeners receives two sibling roots (.dialog-content
+      // and .dialog-buttons), not the window. Use the installed outer element
+      // so both the form and footer are available before Application positions it.
+      const root = dialog.element[0], form = root.querySelector('form.pf1ru-currency-dialog');
       const submit = async event => {
         event.preventDefault(); event.stopImmediatePropagation();
         if (saving || !form.reportValidity()) return;

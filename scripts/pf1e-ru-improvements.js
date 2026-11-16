@@ -874,6 +874,9 @@ const RU_OVERRIDES = {
   "PF1.CustomHitDiceHint": "Вставьте формулу, например floor(@item.level / 2)",
   "PF1.HitPoints": "Пункты здоровья",
   "PF1.LevelUpForm_Health": "Здоровье",
+  "PF1.LevelUp.AbilityScore.Label": "Значение характеристик",
+  "PF1.LevelUp.AbilityScore.PointsLeft": "Очков осталось: {value}",
+  "PF1.SavingThrowButtonLabelGMSensitive": "Испытание {save}",
   "PF1.LevelUpForm_Health_Manual": "Вручную",
   "PF1.LevelUp.Summary.Label": "Итог",
   "PF1.LevelUp.Chat.Header": "Итоги повышения уровня",
@@ -1288,6 +1291,9 @@ function installPluralFormatting() {
 
   game.i18n.format = function (stringId, data = {}) {
     if (isRussian()) {
+      if (stringId === "PF1.SavingThrowButtonLabelGMSensitive") {
+        return russianHiddenSaveLabel(data.save) ?? original(stringId, data);
+      }
       if (stringId === "PF1.NewItem") return russianNewItemName(data.type);
       if (stringId === "PF1.LearnMoreSpell" || stringId === "PF1.LearnMoreSpells") {
         const quantity = Number(data.quantity ?? 1);
@@ -1309,6 +1315,31 @@ function installPluralFormatting() {
   };
 
   game.i18n.__pf1eRuImprovementsFormat = true;
+}
+
+function russianHiddenSaveLabel(save) {
+  const name = {
+    fort: "Стойкости", fortitude: "Стойкости", стойкость: "Стойкости",
+    ref: "Реакции", reflex: "Реакции", реакция: "Реакции",
+    will: "Воли", воля: "Воли"
+  }[String(save ?? "").trim().toLowerCase()];
+  return name ? `Испытание ${name}` : null;
+}
+
+function translateHiddenSaveButtons(root) {
+  if (!isRussian() || !(root instanceof HTMLElement)) return;
+  for (const button of root.querySelectorAll('[data-action="save"]')) {
+    const translate = value => {
+      const match = String(value ?? "").trim().match(/^(.+?)\s+Save$/i);
+      return match ? russianHiddenSaveLabel(match[1]) ?? value : value;
+    };
+    // Also handles old messages; never replace the GM's visible label with DC.
+    if (button.hasAttribute('data-gm-sensitive-inner')) {
+      button.dataset.gmSensitiveInner = translate(button.dataset.gmSensitiveInner);
+    }
+    const label = translate(button.textContent);
+    if (label !== button.textContent) button.textContent = label;
+  }
 }
 
 function installModuleStyles() {
@@ -1644,13 +1675,14 @@ function translateLevelUpForm(root) {
     Health: "Здоровье",
     Manual: "Вручную",
     "Ручной": "Вручную",
-    "Favoured Class Bonus": "Бонус предпочитаемого класса"
+    "Favoured Class Bonus": "Бонус предпочитаемого класса",
+    "Ability Score": "Значение характеристик"
   });
 
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   while (walker.nextNode()) {
     const node = walker.currentNode;
-    node.nodeValue = (node.nodeValue ?? "").replace(
+    node.nodeValue = (node.nodeValue ?? "").replace(/Points remaining:\s*/gi, "Очков осталось: ").replace(
       /Manual health:\s*/gi,
       "Пункты здоровья вручную: "
     );
@@ -1707,6 +1739,7 @@ function translateTokenQuickActions(root) {
 
 function processChatMessage(message, html) {
   const root = html?.[0] ?? html;
+  translateHiddenSaveButtons(root);
   translateActorRollFlavor(root);
   translateChatMetadata(root);
   translateItemPropertyTags(root);
@@ -2021,6 +2054,7 @@ function translateActorSheetFixedFields(root) {
   if (!isRussian() || !(root instanceof HTMLElement)) return;
 
   const selectors = [
+    ".item-detail.item-feat-level > span:not(.tooltipcontent)",
     ".item-detail.item-range > label",
     ".item-detail.item-range > .tooltipcontent",
     ".item-detail.item-attacks > .tooltipcontent",
@@ -2034,6 +2068,10 @@ function translateActorSheetFixedFields(root) {
   if (root.matches(selectors)) elements.unshift(root);
 
   for (const element of elements) {
+    if (element.matches(".item-detail.item-feat-level > span:not(.tooltipcontent)")) {
+      const label = element.textContent.replace(/^(\s*)(?:Level|уровень)\s+(\d+)(\s*)$/i, "$1$2 уровень$3");
+      if (label !== element.textContent) element.textContent = label;
+    }
     if (element.matches(".item-detail.item-range > label, .item-detail.item-range > .tooltipcontent")) {
       const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
       while (walker.nextNode()) {

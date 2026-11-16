@@ -923,6 +923,50 @@
   line-height: 1.35;
 }
 
+.pf1ru-language-removal-list {
+  max-height: 320px;
+  overflow-y: auto;
+  margin: 8px 0;
+}
+
+.pf1ru-language-removal-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px;
+  cursor: pointer;
+}
+
+.pf1ru-language-removal-row input {
+  flex: 0 0 auto;
+}
+
+.pf1ru-language-removal-row small {
+  opacity: 0.75;
+}
+
+.pf1.trait-selector .pf1ru-language-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.pf1.trait-selector .pf1ru-language-actions > button[type="submit"] {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.pf1.trait-selector .pf1ru-clear-languages {
+  flex: 0 0 auto;
+  width: auto;
+  margin: 0;
+  padding: 0 6px;
+  line-height: 28px;
+  white-space: nowrap;
+}
+
 #chat-log .pf1e-ru-curse-revealed,
 #chat-log .pf1e-ru-curse-whisper h4 {
   color: #741d2a;
